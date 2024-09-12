@@ -5,6 +5,7 @@ go 1.22.2
 require (
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-sql-driver/mysql v1.8.1
+	github.com/gomodule/redigo v1.9.2
 	github.com/spf13/viper v1.19.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
