@@ -266,13 +266,13 @@ func (s *FileProcessorService) ReturnRawWO(ctx context.Context, rawWoList, count
 				log.Printf("wo Key saved --> : %s", key)
 				err = s.redisConn.Set(ctx, key, string(jsonData))
 				if err != nil {
-					return fmt.Errorf("Err: %v | failed to save %s as set in redis ", err, key)
+					return fmt.Errorf("err: %v | failed to save %s as set in redis ", err, key)
 				}
 
 				// Used for production
 				err = s.redisConn.ZAdd(ctx, countryWoStagingSet, "1", key)
 				if err != nil {
-					return fmt.Errorf("Err : %v unable to save wo into redis sorted set", err)
+					return fmt.Errorf("err : %v unable to save wo into redis sorted set", err)
 				}
 
 			}
