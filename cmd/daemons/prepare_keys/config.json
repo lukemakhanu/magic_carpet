@@ -1,0 +1,27 @@
+{
+    "mySQL": {
+        "live": "app-user:<>##golang2019@tcp(127.0.0.1)/magic_carpet?charset=utf8"
+    },
+    "redis": {
+        "live": "10.229.227.35:6379",
+        "dbNum": "4",
+        "maxIdle": "500",
+        "maxActive": "500",
+        "duration": "200"
+    },
+    "redis-sorted-set": {
+        "sanitizedSet": "SANITIZED_ODDS",
+        "odds": "NEW_STAGING_ODDS"
+    },
+    "log_setting": {
+        "MaxSize": "100",
+        "MaxBackups": "2",
+        "MaxAge": "1",
+        "Compress": "true"
+    },
+    "prepare_keys": {
+        "logs": "/var/log/magic_carpet/prepare_keys/info.log",
+        "country": "tanzania",
+        "oddsFactor": "0.01"
+    }
+}

@@ -43,12 +43,12 @@ func (mr *MysqlRepository) Save(ctx context.Context, t oddsFiles.OddsFiles) (int
 		t.OddsFileName, t.FileDirectory, t.Country, t.ParentID, t.CompetitionID, t.MatchID)
 
 	if err != nil {
-		return d, fmt.Errorf("Unable to save leagues : %v", err)
+		return d, fmt.Errorf("unable to save leagues : %v", err)
 	}
 
 	lastInsertedID, err := rs.LastInsertId()
 	if err != nil {
-		return d, fmt.Errorf("Unable to retrieve last odds file ID [primary key] : %v", err)
+		return d, fmt.Errorf("unable to retrieve last odds file ID [primary key] : %v", err)
 	}
 
 	return int(lastInsertedID), nil
@@ -62,27 +62,16 @@ func (mr *MysqlRepository) SaveOdd(ctx context.Context, t oddsFiles.OddsFiles) (
 		t.OddsFileName, t.FileDirectory, t.Country, t.ParentID, t.CompetitionID, t.MatchID)
 
 	if err != nil {
-		return d, fmt.Errorf("Unable to save leagues : %v", err)
+		return d, fmt.Errorf("unable to save leagues : %v", err)
 	}
 
 	lastInsertedID, err := rs.LastInsertId()
 	if err != nil {
-		return d, fmt.Errorf("Unable to retrieve last odds file ID [primary key] : %v", err)
+		return d, fmt.Errorf("unable to retrieve last odds file ID [primary key] : %v", err)
 	}
 
 	return int(lastInsertedID), nil
 }
-
-// | odds_file | CREATE TABLE `odds_file` (
-// 	`odds_file_id` bigint(20) NOT NULL AUTO_INCREMENT,
-// 	`odds_file_name` varchar(300) NOT NULL,
-// 	`file_directory` varchar(300) NOT NULL,
-// 	`country` varchar(50) NOT NULL,
-// 	`parent_id` varchar(30) NOT NULL,
-// 	`competition_id` smallint(6) NOT NULL,
-// 	`match_id` int(11) NOT NULL DEFAULT '0',
-// 	`created` datetime NOT NULL,
-// 	`modified` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 func (r *MysqlRepository) GetOddsFiles(ctx context.Context) ([]oddsFiles.OddsFiles, error) {
 	var gc []oddsFiles.OddsFiles
@@ -165,14 +154,6 @@ func (r *MysqlRepository) GetOddsFileWithLimit(ctx context.Context, min, max str
 	return gc, nil
 }
 
-// | odds_file | CREATE TABLE `odds_file` (
-// 	`odds_file_id` bigint(20) NOT NULL AUTO_INCREMENT,
-// 	`odds_file_name` varchar(300) NOT NULL,
-// 	`file_directory` varchar(300) NOT NULL,
-// 	`country` varchar(50) NOT NULL,
-// 	`created` datetime NOT NULL,
-// 	`modified` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
 // UpdateMatch : updates match table
 func (mr *MysqlRepository) UpdateMatch(ctx context.Context, oddsFileName, fileDirectory, country, parentID, competitionID, matchID, oddsFileID string) (int64, error) {
 	var rs int64
@@ -211,13 +192,6 @@ func (r *MysqlRepository) GetOddsParentID(ctx context.Context, parentID string) 
 	return gc, nil
 }
 
-// `match_odds_id` bigint(30) NOT NULL,
-// `round_id` bigint(20) NOT NULL,
-// `parent_id` bigint(20) NOT NULL,
-// `country` varchar(20) NOT NULL,
-// `created` datetime NOT NULL,
-// `modified` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
-
 func (mr *MysqlRepository) SaveMatchOdds(ctx context.Context, roundID, parentID, country string) (int, error) {
 	var d int
 	rs, err := mr.db.Exec("INSERT match_odds SET round_id=?,parent_id=?,country=?, \n"+
@@ -225,12 +199,12 @@ func (mr *MysqlRepository) SaveMatchOdds(ctx context.Context, roundID, parentID,
 		roundID, parentID, country)
 
 	if err != nil {
-		return d, fmt.Errorf("Unable to save match_odds : %v", err)
+		return d, fmt.Errorf("unable to save match_odds : %v", err)
 	}
 
 	lastInsertedID, err := rs.LastInsertId()
 	if err != nil {
-		return d, fmt.Errorf("Unable to retrieve last match odds ID [primary key] : %v", err)
+		return d, fmt.Errorf("unable to retrieve last match odds ID [primary key] : %v", err)
 	}
 
 	return int(lastInsertedID), nil
@@ -238,7 +212,7 @@ func (mr *MysqlRepository) SaveMatchOdds(ctx context.Context, roundID, parentID,
 
 func (r *MysqlRepository) GetReadyMatchCount(ctx context.Context) ([]oddsFiles.MatchDet, error) {
 	var gc []oddsFiles.MatchDet
-	statement := fmt.Sprintf("select count(*) as matchCount,round_id from match_odds group by round_id  ")
+	statement := fmt.Sprintf("select count(*) as matchCount,round_id from match_odds group by round_id")
 
 	raws, err := r.db.Query(statement)
 	if err != nil {
