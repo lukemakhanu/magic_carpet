@@ -23,9 +23,9 @@
         "country": "tz"
     },
     "ke": {
-        "ls_directory": "/data/generator/live_scores",
-        "wo_directory": "/data/generator/winning_outcomes",
-        "odds_directory": "/data/generator/odds",
+        "ls_directory": "/ke/generator/live_scores",
+        "wo_directory": "/ke/generator/winning_outcomes",
+        "odds_directory": "/ke/generator/odds",
         "country": "ke"
     },
     "gh": {

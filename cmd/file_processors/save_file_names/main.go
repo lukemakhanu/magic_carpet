@@ -75,7 +75,7 @@ func main() {
 	go func() {
 		err := odds.SaveFiles(ctx, viper.GetString("ke.odds_directory"), viper.GetString("ke.country"))
 		if err != nil {
-			log.Printf("Err : %v unable to save odds files.", err)
+			log.Printf("Err : %v unable to save odds files...", err)
 		}
 	}()
 
