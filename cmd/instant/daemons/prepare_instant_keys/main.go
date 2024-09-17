@@ -83,13 +83,13 @@ func SelectKeys(ctx context.Context, sm *prepareInstantKey.PrepareInstantKeyServ
 
 	err := sm.SelectKeys(ctx, oddsSortedSet, sanitizedKeysSet, matches)
 	if err != nil {
-		log.Printf("Err : %v failed to generate sanitized", err)
+		log.Printf("Err : %v failed to generate sanitized..", err)
 	}
 }
 
 func InitConfig() {
 	configUtils(addConfigPathLive, addConfigPathLocal)
-	logUtils(viper.GetString("prepare_keys.logs"), viper.GetInt("log_setting.MaxSize"),
+	logUtils(viper.GetString("prepare_instant_keys.logs"), viper.GetInt("log_setting.MaxSize"),
 		viper.GetInt("log_setting.MaxBackups"), viper.GetInt("log_setting.MaxAge"),
 		viper.GetBool("log_setting.Compress"))
 }
