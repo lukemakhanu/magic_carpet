@@ -32,16 +32,16 @@ func main() {
 		fmt.Printf("Unable to start data server api service ** %v", err)
 	}
 
-	wls := strings.Split(viper.GetString("magic_carpet.whitelisted"), ",")
+	wls := strings.Split(viper.GetString("game_server.whitelisted"), ",")
 
 	IPWhitelist := make(map[string]bool)
 	for _, v := range wls {
 		IPWhitelist[v] = true
 	}
 
-	log.Println("Whitelisted ips are::: >>>", IPWhitelist)
+	log.Println("Whitelisted ips are >>>", IPWhitelist)
 
-	interfaces.Run(viper.GetInt("magic_carpet.port"), w, IPWhitelist)
+	interfaces.Run(viper.GetInt("game_server.port"), w, IPWhitelist)
 
 	sig := make(chan os.Signal, 1)
 	defer close(sig)
