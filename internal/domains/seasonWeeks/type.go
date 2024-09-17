@@ -59,3 +59,17 @@ type SeasonWeeksAPI struct {
 	Created      string
 	Modified     string
 }
+
+// ProductionSeasonWeeksAPI :
+type ProductionSeasonWeeksAPI struct {
+	SeasonWeekID string
+	LeagueID     string
+	SeasonID     string
+	WeekNumber   string
+	Status       string
+	StartTime    string
+	EndTime      string
+	ApiDate      string
+	Created      string
+	Modified     string
+}

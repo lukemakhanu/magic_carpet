@@ -282,3 +282,31 @@ func (mr *MysqlRepository) UpdateSsnWeekStatus(ctx context.Context, seasonWeekID
 	}
 	return result.RowsAffected()
 }
+
+func (r *MysqlRepository) ApiSsnWeeksNew(ctx context.Context, seasonID string) ([]seasonWeeks.ProductionSeasonWeeksAPI, error) {
+	var gc []seasonWeeks.ProductionSeasonWeeksAPI
+
+	statement := fmt.Sprintf("select season_week_id,league_id,season_id,week_number,status,start_time,end_time, date(start_time) as api_date, \n"+
+		"created,modified from sn_wks where season_id = '%s' and status='active' and start_time > now() + interval 4 minute order by start_time asc limit 110 ", seasonID) //110
+
+	raws, err := r.db.Query(statement)
+	if err != nil {
+		return nil, err
+	}
+
+	for raws.Next() {
+		var g seasonWeeks.ProductionSeasonWeeksAPI
+		err := raws.Scan(&g.SeasonWeekID, &g.LeagueID, &g.SeasonID, &g.WeekNumber, &g.Status, &g.StartTime, &g.EndTime, &g.ApiDate, &g.Created, &g.Modified)
+		if err != nil {
+			return nil, err
+		}
+		gc = append(gc, g)
+	}
+
+	if err = raws.Err(); err != nil {
+		return nil, err
+	}
+	raws.Close()
+
+	return gc, nil
+}
