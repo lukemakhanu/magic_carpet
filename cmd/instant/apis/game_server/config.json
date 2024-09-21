@@ -1,0 +1,19 @@
+{
+    "redis": {
+        "dbNum": "4",
+        "profileDbNum": "5",
+        "maxIdle": "500",
+        "maxActive": "500",
+        "duration": "200"
+    },
+    "log_setting": {
+        "MaxSize": "100",
+        "MaxBackups": "2",
+        "MaxAge": "1",
+        "Compress": "true"
+    },
+    "client_api": {
+        "logs": "/var/log/veimu_apps/client_api/info.log",
+        "port": "8030"
+    }
+}
