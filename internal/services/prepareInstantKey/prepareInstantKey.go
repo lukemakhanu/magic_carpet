@@ -143,7 +143,8 @@ func (s *PrepareInstantKeyService) SelectKeys(ctx context.Context, oddsSortedSet
 		return fmt.Errorf("err : %v failed to get zcard for key %s ", err, sanitizedKeysSet)
 	}
 
-	if sanitizedSetLen > 28000 && tgOver25Len > 14000 && tgUnder25Len > 14000 {
+	//if sanitizedSetLen > 28000 && tgOver25Len > 14000 && tgUnder25Len > 14000 {
+	if sanitizedSetLen > 100000 && tgOver25Len > 50000 && tgUnder25Len > 50000 {
 		return fmt.Errorf("there are enough games sanitized [%d], sanOv25 [%d], sanUn25 [%d] in the sanitized list %s skip generating more ",
 			sanitizedSetLen, tgOver25Len, tgUnder25Len, sanitizedKeysSet)
 	}

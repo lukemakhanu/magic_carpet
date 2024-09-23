@@ -887,52 +887,91 @@ func (s *InstantGameServerService) QueryInstantGames(c *gin.Context) {
 	earlyFinish := "no"
 	played := "no"
 
+	// We have to have matches for all
+	// competition
+
 	competitions := []string{"1", "2", "3", "4"}
 	for _, cID := range competitions {
 
-		log.Printf("instantCompetitionID %d", cID)
+		// create five next games
+		// that a client can stroll through
 
-		pp, err := matchRequests.NewMatchRequests(cID, plyID, startTime, endTime, earlyFinish, played)
-		if err != nil {
-			log.Printf("err : %v unable to initialize a matchRequests", err)
-			s.httpConf.JSON(c.Writer, http.StatusBadRequest, gin.H{"error": "unable to initialize a matchRequests"})
-			return
-		}
+		matchRound := 5
 
-		matchRequestID, err := s.matchRequestMysql.Save(c.Request.Context(), *pp)
-		if err != nil {
-			log.Printf("err : %v unable to create match request for competition id %s", err, cID)
-			s.httpConf.JSON(c.Writer, http.StatusBadRequest, gin.H{"error": "unable to create match request"})
-			return
-		}
+		for x := 0; x < matchRound; x++ {
 
-		// Query for matches required for this client.
-
-		for x := 0; x < 10; x++ {
-
-			mrID := fmt.Sprintf("%d", matchRequestID)
-			parentMatchID := "0"
-			sm, err := selectedMatches.NewSelectedMatches(plyID, mrID, parentMatchID)
+			keyCreated := "pending"
+			pp, err := matchRequests.NewMatchRequests(cID, plyID, startTime, endTime, earlyFinish, played, keyCreated)
 			if err != nil {
-				log.Printf("err : %v unable to initialize a selectedMatch", err)
-				s.httpConf.JSON(c.Writer, http.StatusBadRequest, gin.H{"error": "unable to initialize selectedMatch"})
+				log.Printf("err : %v unable to initialize a matchRequests", err)
+				s.httpConf.JSON(c.Writer, http.StatusBadRequest, gin.H{"error": "unable to initialize a matchRequests"})
 				return
 			}
 
-			smID, err := s.selectedMatchMysql.Save(c.Request.Context(), *sm)
+			matchRequestID, err := s.matchRequestMysql.Save(c.Request.Context(), *pp)
 			if err != nil {
-				log.Printf("err : %v unable to create selected match for competition id %s", err, cID)
+				log.Printf("err : %v unable to create match request for competition id %s", err, cID)
 				s.httpConf.JSON(c.Writer, http.StatusBadRequest, gin.H{"error": "unable to create match request"})
 				return
 			}
-			log.Prin
 
+			// Query for matches required for this client.
+
+			for x := 0; x < 10; x++ {
+
+				mrID := fmt.Sprintf("%d", matchRequestID)
+				parentMatchID := "0"
+
+				sm, err := selectedMatches.NewSelectedMatches(plyID, mrID, parentMatchID)
+				if err != nil {
+					log.Printf("err : %v unable to initialize a selectedMatch", err)
+					s.httpConf.JSON(c.Writer, http.StatusBadRequest, gin.H{"error": "unable to initialize selectedMatch"})
+					return
+				}
+
+				smID, err := s.selectedMatchMysql.Save(c.Request.Context(), *sm)
+				if err != nil {
+					log.Printf("err : %v unable to create selected match for competition id %s", err, cID)
+					s.httpConf.JSON(c.Writer, http.StatusBadRequest, gin.H{"error": "unable to create match request"})
+					return
+				}
+
+				log.Printf("selected match_id %d", smID)
+
+			}
 		}
 
-		s.httpConf.JSON(c.Writer, http.StatusBadRequest, gin.H{"error": "selected match already registered"})
-		return
-
 	}
+
+	// Query the pending ids from the db table request_matches and
+	// selected_matches and create the game for the client.
+
+	keyCreated := "pending"
+	reqMatches, err := s.matchRequestMysql.PendingRequestedMatchDesc(c.Request.Context(), plyID, p.CompetitionID, keyCreated)
+	if err != nil {
+		log.Printf("err : %v unable to return pending requested matches", err)
+		s.httpConf.JSON(c.Writer, http.StatusBadRequest, gin.H{"error": "err on loading matches"})
+		return
+	}
+
+	for _, m := range reqMatches {
+		log.Printf("matchRequestID : %s | keyCreated : %s", m.MatchRequestID, m.KeyCreated)
+
+		selMatch, err := s.selectedMatchMysql.GetMatchesbyMatchRequestID(c.Request.Context(), m.MatchRequestID)
+		if err != nil {
+			log.Printf("err : %v unable to return selected matches", err)
+			s.httpConf.JSON(c.Writer, http.StatusBadRequest, gin.H{"error": "err on loading selected matches"})
+			return
+		}
+
+		for _, sm := range selMatch {
+			log.Printf("sm.SelectedMatchesID, sm.ParentMatchID", sm.SelectedMatchesID, sm.ParentMatchID)
+
+		}
+	}
+
+	// 	s.httpConf.JSON(c.Writer, http.StatusBadRequest, gin.H{"error": "selected match already registered"})
+	// return
 
 	profileID := 1
 	message := fmt.Sprintf("Client of profile_id %d created successfully", profileID)

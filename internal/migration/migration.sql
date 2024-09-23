@@ -60,3 +60,5 @@ ALTER TABLE `selected_matches`
   MODIFY `selected_matches_id` bigint(40) NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `players` CHANGE `prayer_id` `player_id` BIGINT(30) NOT NULL AUTO_INCREMENT;
+ALTER TABLE `match_requests` ADD `key_created` ENUM('pending','created','spoilt') NOT NULL AFTER `played`, ADD INDEX (`key_created`);
+

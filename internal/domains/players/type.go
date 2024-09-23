@@ -9,5 +9,6 @@ type Players struct {
 }
 
 type PlayerRequests struct {
-	ProfileTag string `json:"profile_tag"`
+	ProfileTag    string `json:"profile_tag"`
+	CompetitionID string `json:"competition_id"`
 }

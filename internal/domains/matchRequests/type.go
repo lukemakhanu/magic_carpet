@@ -8,6 +8,7 @@ type MatchRequests struct {
 	EndTime              string
 	EarlyFinish          string
 	Played               string
+	KeyCreated           string
 	Created              string
 	Modified             string
 }

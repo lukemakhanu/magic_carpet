@@ -117,3 +117,31 @@ func (r *MysqlRepository) GetMatchesbyPlayerID(ctx context.Context, playerID str
 
 	return gc, nil
 }
+
+func (r *MysqlRepository) GetMatchesbyMatchRequestID(ctx context.Context, matchRequestID string) ([]selectedMatches.SelectedMatches, error) {
+	var gc []selectedMatches.SelectedMatches
+	statement := fmt.Sprintf("select selected_matches_id,player_id,match_request_id,parent_match_id,created,\n"+
+		"modified from selected_matches where match_request_id = '%s' ",
+		matchRequestID)
+
+	raws, err := r.db.Query(statement)
+	if err != nil {
+		return nil, err
+	}
+
+	for raws.Next() {
+		var g selectedMatches.SelectedMatches
+		err := raws.Scan(&g.SelectedMatchesID, &g.PlayerID, &g.MatchRequestID, &g.ParentMatchID, &g.Created, &g.Modified)
+		if err != nil {
+			return nil, err
+		}
+		gc = append(gc, g)
+	}
+
+	if err = raws.Err(); err != nil {
+		return nil, err
+	}
+	raws.Close()
+
+	return gc, nil
+}
