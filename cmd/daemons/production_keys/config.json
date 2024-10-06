@@ -20,7 +20,7 @@
         "Compress": "true"
     },
     "production_keys": {
-        "logs": "/var/log/cradle_v2/production_keys/info.log",
+        "logs": "/var/log/magic_carpet/production_keys/info.log",
         "country": "ke"
     }
 }
