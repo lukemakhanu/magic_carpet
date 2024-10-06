@@ -28,7 +28,7 @@ func main() {
 
 	oddsSortedSet := viper.GetString("redis-sorted-set.odds")
 	oddsu15Set := viper.GetString("redis-sorted-set.oddsu15")
-	log.Printf("oddsu15Set %s", oddsu15Set)
+	log.Printf("oddsu15Set :: %s", oddsu15Set)
 
 	pg, err := productionKey.NewProcessKeyService(
 		productionKey.WithMysqlMatchesRepository(viper.GetString("mySQL.live")),

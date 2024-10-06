@@ -1,18 +1,17 @@
 {
     "mySQL": {
-        "live": "app-user:<>##golang2019@tcp(127.0.0.1)/magic_carpet?charset=utf8"
+        "live": "app-user:<>##golang2019@tcp(127.0.0.1)/data_generator?charset=utf8"
     },
     "redis": {
-        "live": "10.229.227.35:6379",
+        "live": "127.0.0.1:6379",
         "dbNum": "4",
         "maxIdle": "500",
         "maxActive": "500",
         "duration": "200"
     },
     "redis-sorted-set": {
-        "winningOutcome": "NEW_STAGING_WO",
-        "liveScore": "NEW_STAGING_LS",
-        "odds": "SANITIZED_ODDS"
+        "odds": "SANITIZED_ODDS",
+        "oddsu15": "SANITIZED_ODDS_TGU15"
     },
     "log_setting": {
         "MaxSize": "100",
@@ -21,7 +20,7 @@
         "Compress": "true"
     },
     "production_keys": {
-        "logs": "/var/log/magic_carpet/production_keys/info.log",
+        "logs": "/var/log/cradle_v2/production_keys/info.log",
         "country": "ke"
     }
 }
