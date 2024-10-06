@@ -1,0 +1,21 @@
+{
+    "redis": {
+        "live": "127.0.0.1:6379",
+        "dbNum": "4",
+        "maxIdle": "500",
+        "maxActive": "500",
+        "duration": "200"
+    },
+    "log_setting": {
+        "MaxSize": "100",
+        "MaxBackups": "2",
+        "MaxAge": "1",
+        "Compress": "true"
+    },
+    "teams": {
+        "logs": "/var/log/magic_carpet/teams/info.log",
+        "directory": "/ke/generator/teams",
+        "combination": "1,3,5",
+        "country": "ke"
+    }
+}
