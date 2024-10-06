@@ -39,7 +39,7 @@ func main() {
 		IPWhitelist[v] = true
 	}
 
-	log.Println("Whitelisted ips are >>>", IPWhitelist)
+	log.Println("Whitelisted ips are >>>>>> ", IPWhitelist)
 
 	interfaces.Run(viper.GetInt("game_server.port"), w, IPWhitelist)
 
@@ -83,6 +83,6 @@ func configUtils(addConfigPathLive string, addConfigPathLocal string) {
 
 	viper.WatchConfig()
 	viper.OnConfigChange(func(e fsnotify.Event) {
-		log.Printf("Config file changed: %s", e.Name)
+		log.Printf("Config file changed::: %s", e.Name)
 	})
 }
