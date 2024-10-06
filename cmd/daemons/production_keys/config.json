@@ -1,6 +1,6 @@
 {
     "mySQL": {
-        "live": "app-user:<>##golang2019@tcp(127.0.0.1)/data_generator?charset=utf8"
+        "live": "app-user:<>##golang2019@tcp(127.0.0.1)/magic_carpet?charset=utf8"
     },
     "redis": {
         "live": "127.0.0.1:6379",

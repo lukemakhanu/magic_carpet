@@ -82,7 +82,7 @@ func SaveFinalOddsKey(ctx context.Context, sm *productionKey.ProcessKeyService, 
 
 	err := sm.GetUpcomingSeasonWeeks2(ctx, oddsSortedSet, oddsu15Set)
 	if err != nil {
-		log.Printf("Err : %v failed to save production odds", err)
+		log.Printf("Err : %v failed to save production odds ::: ", err)
 	}
 }
 
