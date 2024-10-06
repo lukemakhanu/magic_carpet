@@ -369,7 +369,7 @@ func (s *PrepareKeyService) SelectKeys2(ctx context.Context, oddsSortedSet, sani
 
 							log.Printf("status : %t, count : %d, message : %s", status, count, message)
 
-							if count > 0 {
+							if count > 3 {
 								log.Printf("Err : %v match already used recently country : %s matchID %s ", err, parentID[0], parentID[1])
 							} else {
 

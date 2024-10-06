@@ -61,7 +61,7 @@ func New(redisServer string, dbNum, maxIdle, maxActive int, idleTimeout time.Dur
 
 		MaxIdle:     maxIdle,
 		MaxActive:   maxIdle,
-		IdleTimeout: 30 * time.Second,
+		IdleTimeout: 90 * time.Second,
 
 		Dial: func() (redis.Conn, error) {
 
@@ -73,9 +73,9 @@ func New(redisServer string, dbNum, maxIdle, maxActive int, idleTimeout time.Dur
 
 			c, err := redis.Dial("tcp", redisServer,
 				redis.DialDatabase(dbNum),
-				redis.DialConnectTimeout(600*time.Millisecond),
-				redis.DialReadTimeout(600*time.Millisecond),
-				redis.DialWriteTimeout(600*time.Millisecond))
+				redis.DialConnectTimeout(1200*time.Millisecond),
+				redis.DialReadTimeout(1200*time.Millisecond),
+				redis.DialWriteTimeout(1200*time.Millisecond))
 			if err != nil {
 				return nil, err
 			}
