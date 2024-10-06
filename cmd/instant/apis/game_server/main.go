@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/lukemakhanu/magic_carpet/internal/services/instantGameServer"
+	instantRedisServer "github.com/lukemakhanu/magic_carpet/internal/services/instantRedis"
 
 	"github.com/spf13/viper"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -38,19 +40,30 @@ func main() {
 	redisLive := "127.0.0.1:6379"
 	mysqlLive := "root:tribute@tcp(127.0.0.1)/veimu?charset=utf8"
 
+	ir, err := instantRedisServer.NewInstantRedisServerService(
+		instantRedisServer.WithSharedHttpConfRepository(),
+		instantRedisServer.WithRedisResultsRepository(redisLive, viper.GetInt("redis.dbNum"),
+			viper.GetInt("redis.maxIdle"), viper.GetInt("redis.maxActive"), viper.GetDuration("redis.duration")),
+	)
+	if err != nil {
+		panic(err)
+	}
+	ctx := context.Background()
+
+	allMatches := "SANITIZED_INSTANT_ODDS"
+	availableMatches, err := ir.AvailableGames(ctx, allMatches)
+	if err != nil {
+		log.Printf("err : %v on loading all matches", err)
+	}
+
 	ms, err := instantGameServer.NewInstantGameServerService(
 		instantGameServer.WithSharedHttpConfRepository(),
-		instantGameServer.WithSharedFuncRepository(),
-		instantGameServer.WithMysqlClientBetsRepository(mysqlLive),
-		instantGameServer.WithMysqlClientProfilesRepository(mysqlLive),
-		instantGameServer.WithMysqlIframeProfilesRepository(mysqlLive),
-		instantGameServer.WithMysqlContactUsRepository(mysqlLive),
-		instantGameServer.WithProjectConstants(key, iv, authURL, infoURL, betURL, resultURL, selectedTimeZone),
-		instantGameServer.WithRedisRegisterClientRepository(redisLive, viper.GetInt("redis.profileDbNum"),
-			viper.GetInt("redis.maxIdle"), viper.GetInt("redis.maxActive"), viper.GetDuration("redis.duration")),
+		instantGameServer.WithMysqlPlayersRepository(mysqlLive),
+		instantGameServer.WithMysqlMatchesRequestsRepository(mysqlLive),
+		instantGameServer.WithMysqlSelectedMatchesRepository(mysqlLive),
+		instantGameServer.WithAvailableMatches(availableMatches),
 		instantGameServer.WithRedisResultsRepository(redisLive, viper.GetInt("redis.dbNum"),
 			viper.GetInt("redis.maxIdle"), viper.GetInt("redis.maxActive"), viper.GetDuration("redis.duration")),
-		instantGameServer.WithMysqlBlackListedTokensRepository(mysqlLive),
 	)
 	if err != nil {
 		panic(err)
@@ -69,7 +82,6 @@ func main() {
 }
 
 func Run(port int, ms *instantGameServer.InstantGameServerService) {
-	expectedHost := "34.89.14.139:8030"
 	Router = gin.Default()
 
 	Router.Use(cors.New(cors.Config{
@@ -89,26 +101,9 @@ func Run(port int, ms *instantGameServer.InstantGameServerService) {
 		MaxAge: 12 * time.Hour,
 	}))
 
-	//Router.Use(ms.GetCORS())
-
-	Router.Use(ms.SecureHeaders(expectedHost))
-
-	instantGames := Router.Group("/client/")
+	instantGames := Router.Group("/v1/")
 	{
-		instantGames.POST("/register", ms.RegisterClient)
-		instantGames.POST("/login", ms.GetCLientLoginData)
-		instantGames.POST("/contactus", ms.ContactUs)
-
 		instantGames.POST("/fetch_instant_games", ms.QueryInstantGames)
-
-	}
-
-	Router.Use(ms.JwtAuth())
-	authApi := Router.Group("/integration/")
-	{
-		authApi.POST("/auth", ms.GetProfileDetails)
-		authApi.POST("/bet", ms.ClientPlaceBet)
-		authApi.POST("/result", ms.ClientResultBet)
 	}
 
 	portStr := fmt.Sprintf(":%d", port)

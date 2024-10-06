@@ -8,4 +8,5 @@ type MatchRequestsRepository interface {
 	UpdateEarlyFinish(ctx context.Context, earlyFinish, matchRequestID string) (int64, error)
 	UpdatePlayed(ctx context.Context, earlyFinish, matchRequestID string) (int64, error)
 	PendingRequestedMatchDesc(ctx context.Context, playerID, competitionID, keyCreated string) ([]MatchRequests, error)
+	PlayerUsedMatchesDesc(ctx context.Context, playerID string) ([]UsedParentMatchIDs, error)
 }

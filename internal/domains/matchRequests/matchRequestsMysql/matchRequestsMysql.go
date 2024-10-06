@@ -128,3 +128,32 @@ func (r *MysqlRepository) PendingRequestedMatchDesc(ctx context.Context, playerI
 
 	return gc, nil
 }
+
+// PlayerUsedMatchesDesc : returns players recently used matches
+func (r *MysqlRepository) PlayerUsedMatchesDesc(ctx context.Context, playerID string) ([]matchRequests.UsedParentMatchIDs, error) {
+	var gc []matchRequests.UsedParentMatchIDs
+	statement := fmt.Sprintf("select s.parent_match_id from match_requests as mr inner join selected_matches as s \n"+
+		"where mr.player_id = '%s' order by match_request_id asc",
+		playerID)
+
+	raws, err := r.db.Query(statement)
+	if err != nil {
+		return nil, err
+	}
+
+	for raws.Next() {
+		var g matchRequests.UsedParentMatchIDs
+		err := raws.Scan(&g.ParentMatchID)
+		if err != nil {
+			return nil, err
+		}
+		gc = append(gc, g)
+	}
+
+	if err = raws.Err(); err != nil {
+		return nil, err
+	}
+	raws.Close()
+
+	return gc, nil
+}

@@ -12,3 +12,7 @@ type MatchRequests struct {
 	Created              string
 	Modified             string
 }
+
+type UsedParentMatchIDs struct {
+	ParentMatchID string
+}
