@@ -22,7 +22,6 @@
     },
     "production_keys": {
         "logs": "/var/log/magic_carpet/production_keys/info.log",
-        "country": "tanzania",
-        "oddsFactor": "0.02"
+        "country": "ke"
     }
 }

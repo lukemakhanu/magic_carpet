@@ -6,9 +6,8 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"math/rand"
+	"math/rand/v2"
 	"strconv"
-	"time"
 
 	"github.com/lukemakhanu/magic_carpet/internal/domains/oddsConfigs"
 	"github.com/lukemakhanu/magic_carpet/internal/domains/oddsFiles"
@@ -81,6 +80,123 @@ func (s *OddsConfigs) FormulateOdds(ctx context.Context) ([]oddsFiles.FinalMarke
 				Code: x.SubTypeID,
 			}
 
+			for _, i := range x.RawOutcomes {
+				//log.Printf("outcomeID: %s, outcomeName: %s, outcomeAlias: %s, oddValue: %s",
+				//	i.OutcomeID, i.OutcomeName, i.OutcomeAlias, i.OddValue)
+
+				oddVl, err := strconv.ParseFloat(i.OddValue, 64)
+				if err != nil {
+					log.Printf("Err : %v failed to convert string to float64", err)
+				} else {
+
+					savedOdds := oddVl - s.oddsFactor
+					finalOdd := math.Floor(savedOdds*100) / 100
+
+					outcome := oddsFiles.FinalOutcomes{
+						OutcomeID:    i.OutcomeID,
+						OutcomeName:  i.OutcomeName,
+						OddValue:     finalOdd, //savedOdds,
+						OutcomeAlias: i.OutcomeAlias,
+					}
+
+					mkt.FinalOutcomes = append(mkt.FinalOutcomes, outcome)
+
+				}
+			}
+
+			mkts = append(mkts, mkt)
+
+		} else {
+			//log.Printf("Skipped market : %s", x.SubTypeID)
+		}
+
+	}
+
+	// Process Winning Outcomes
+
+	var wo oddsFiles.RawWinningOutcomes
+	err = json.Unmarshal([]byte(s.woPayload), &wo)
+	if err != nil {
+		log.Printf("Err on winning outcome : %v", err)
+	}
+
+	fs.HomeScore = wo.HomeScore
+	fs.AwayScore = wo.AwayScore
+
+	for _, w := range wo.RawWOs {
+
+		_, status := renameMarketName(w.SubTypeID)
+
+		if status == "1" {
+
+			fWo := oddsFiles.FinalWinningOutcomes{
+				SubTypeID:   w.SubTypeID,
+				OutcomeID:   w.OutcomeID,
+				OutcomeName: w.OutcomeName,
+				Result:      w.Result,
+			}
+
+			fs.FinalWinningOutcomes = append(fs.FinalWinningOutcomes, fWo)
+
+		} else {
+			//log.Printf("Skipped market for winning outcome : %s", w.SubTypeID)
+		}
+
+	}
+
+	// Process Live scores.
+
+	var ls oddsFiles.RawLS
+	err = json.Unmarshal([]byte(s.lsPayload), &ls)
+	if err != nil {
+		log.Printf("Err on live score : %v", err)
+	}
+
+	for _, x := range ls.Goals {
+
+		log.Printf("x.AwayScore : %d, x.HomeScore : %d, x.MinuteScored : %s", x.AwayScore, x.HomeScore, x.MinuteScored)
+
+		l := oddsFiles.FinalLiveScores{
+			HomeScore:    x.HomeScore,
+			AwayScore:    x.AwayScore,
+			MinuteScored: x.MinuteScored,
+		}
+
+		lsc = append(lsc, l)
+
+	}
+
+	return mkts, fs, lsc, nil
+}
+
+// FormulateOdds2 : rewrites odds the right way
+func (s *OddsConfigs) FormulateOdds2(ctx context.Context) ([]oddsFiles.FinalMarkets, oddsFiles.FinalScores, []oddsFiles.FinalLiveScores, error) {
+
+	mkts := []oddsFiles.FinalMarkets{}
+	fs := oddsFiles.FinalScores{}
+	lsc := []oddsFiles.FinalLiveScores{}
+
+	var o oddsFiles.RawOdds
+	err := json.Unmarshal([]byte(s.oddsPayload), &o)
+	if err != nil {
+		log.Printf("Err on markets : %v", err)
+	}
+
+	//log.Printf("ProjectID:%s, parentMatchID:%s, matchID:%s",
+	//	o.ProjectID, o.ParentMatchID, o.MatchID)
+
+	for _, x := range o.RawMarkets {
+		//log.Printf("name:%s, subTypeID:%s", x.Name, x.SubTypeID)
+
+		updatedName, status := renameMarketName(x.SubTypeID)
+
+		if status == "1" {
+
+			mkt := oddsFiles.FinalMarkets{
+				Name: updatedName,
+				Code: x.SubTypeID,
+			}
+
 			rr := 1
 			for _, i := range x.RawOutcomes {
 				//log.Printf("outcomeID: %s, outcomeName: %s, outcomeAlias: %s, oddValue: %s",
@@ -93,13 +209,16 @@ func (s *OddsConfigs) FormulateOdds(ctx context.Context) ([]oddsFiles.FinalMarke
 
 					goals := s.OddsFactor(ctx)
 					max := len(goals)
-					selectedRations := s.NewRandomIndexes(ctx, max)
+					selectedRations := rand.IntN(max)
 
-					selectedOdd := goals[selectedRations[5]]
+					//selectedRations := s.NewRandomIndexes(ctx, max)
+
+					selectedOdd := goals[selectedRations] //goals[selectedRations[5]]
 
 					savedOdds := oddVl - selectedOdd //s.oddsFactor
-					log.Printf("*** selectedOdd *** %f | finalOdd %f", selectedOdd, savedOdds)
 					finalOdd := math.Floor(savedOdds*100) / 100
+					log.Printf("*** oddVl *** %f | selectedOdd *** %f | savedOdds %f | finalOdd %f",
+						oddVl, selectedOdd, savedOdds, finalOdd)
 
 					outcome := oddsFiles.FinalOutcomes{
 						OutcomeID:    i.OutcomeID,
@@ -184,6 +303,37 @@ func (s *OddsConfigs) FormulateOdds(ctx context.Context) ([]oddsFiles.FinalMarke
 	return mkts, fs, lsc, nil
 }
 
+// NewRandomIndexes : used to create new randomization.
+func (s *OddsConfigs) NewRandomIndexes(ctx context.Context, max int) map[int]int {
+	//min := 1
+
+	m := make(map[int]int)
+	for x := 0; x < 10; x++ {
+		// rand.Seed(time.Now().UnixNano())
+		// val := rand.Intn(max-min+1) + min
+
+		val := rand.IntN(max)
+		m[val] = val
+	}
+
+	return m
+}
+
+// TotalGoalsPerSession : this helps with distribution of total goals per match session.
+func (s *OddsConfigs) OddsFactor(ctx context.Context) []float64 {
+
+	data := []float64{
+		0.0119, 0.0117, 0.011, 0.0114, 0.0118, 0.0117, 0.0114,
+		0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01,
+		0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012,
+		0.02, 0.0204, 0.0208, 0.0209, 0.02, 0.02,
+		0.021, 0.021, 0.021, 0.021,
+		-0.001, -0.001, -0.001,
+	}
+
+	return data
+}
+
 func renameMarketName(subTypeID string) (string, string) {
 
 	if subTypeID == "CS" {
@@ -248,33 +398,4 @@ func renameMarketName(subTypeID string) (string, string) {
 		return "0", "0"
 	}
 
-}
-
-// TotalGoalsPerSession : this helps with distribution of total goals per match session.
-func (s *OddsConfigs) OddsFactor(ctx context.Context) []float64 {
-
-	data := []float64{
-		0.0109, 0.0107, 0.011, 0.0114, 0.0118, 0.0117, 0.0114,
-		0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01,
-		0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012,
-		0.02, 0.0204, 0.0208, 0.0209, 0.02, 0.02,
-		0.021, 0.021, 0.021, 0.021,
-		-0.001, -0.001, -0.001,
-	}
-
-	return data
-}
-
-// NewRandomIndexes : used to create new randomization.
-func (s *OddsConfigs) NewRandomIndexes(ctx context.Context, max int) map[int]int {
-	min := 1
-
-	m := make(map[int]int)
-	for x := 0; x < 10; x++ {
-		rand.Seed(time.Now().UnixNano())
-		val := rand.Intn(max-min+1) + min
-		m[val] = val
-	}
-
-	return m
 }

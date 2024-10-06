@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
+	"math/rand/v2"
 	"strings"
 	"time"
 
@@ -130,7 +130,7 @@ func (s *ProcessKeyService) GetUpcomingSeasonWeeks(ctx context.Context, oddsSort
 
 	for _, x := range data {
 
-		log.Printf("x.LeagueID::: %s, x.SeasonWeekID::: %s, x.SeasonID::: %s", x.LeagueID, x.SeasonWeekID, x.SeasonID)
+		log.Printf("x.LeagueID:%s, x.SeasonWeekID:%s, x.SeasonID:%s", x.LeagueID, x.SeasonWeekID, x.SeasonID)
 
 		n := 0
 
@@ -223,7 +223,215 @@ func (s *ProcessKeyService) GetUpcomingSeasonWeeks(ctx context.Context, oddsSort
 					log.Printf("Err : %v failed to initialize odds ", err)
 				}
 
-				mtk, winningOutcomes, liveScores, err := mts.FormulateOdds(ctx)
+				mtk, winningOutcomes, liveScores, err := mts.FormulateOdds2(ctx) // FormulateOdds(ctx)
+				if err != nil {
+					log.Printf("Err : %v failed to formulate odds ", err)
+				}
+
+				matches.FinalMarkets = mtk
+				woMatches.FinalScore = winningOutcomes
+				lsMatches.FinalLiveScores = liveScores
+
+				log.Printf("oddsKey :::--> %s ", fd.OddsKey)
+				log.Println("liveScores ---> ", liveScores)
+
+				n++
+
+				hh.FinalMatches = append(hh.FinalMatches, matches)
+				wo.FinalMatchesWO = append(wo.FinalMatchesWO, woMatches)
+				lsc.FinalMatchesLS = append(lsc.FinalMatchesLS, lsMatches)
+
+				// Start working on winning outcomes
+
+				// Update this match as processed
+
+				status := "active"
+				updated, err := s.matchesMysql.UpdateGameStatus(ctx, status, g.MatchID)
+				if err != nil {
+					log.Printf("Err : %v failed to update processed season week", err)
+				}
+
+				log.Printf("updated record : %d", updated)
+			}
+
+			// Save Match odds into redis for further use
+
+			sTime, err := time.Parse("2006-01-02 15:04:05", x.StartTime)
+			if err != nil {
+				log.Printf("Err : %v failed to convert string to time", err)
+			}
+
+			keyName := fmt.Sprintf("%s_%s_%s", "pr_odds", sTime.Format("2006-01-02"), x.SeasonWeekID)
+			log.Printf(">>> Odds key saved >>>> %s", keyName)
+
+			oddsData, err := json.Marshal(hh)
+			if err != nil {
+				log.Printf("Err: %v failed to marshall odds json", err)
+			} else {
+
+				expiry := "108000"
+				err := s.redisConn.SetWithExpiry(ctx, keyName, string(oddsData), expiry)
+				if err != nil {
+					log.Printf("Err: %v failed to odds set", err)
+				}
+			}
+
+			keyNameWO := fmt.Sprintf("%s_%s_%s", "pr_wo", sTime.Format("2006-01-02"), x.SeasonWeekID)
+			log.Printf(">>> WinningOutcome key saved >>>> %s", keyNameWO)
+
+			winningOutcomesData, err := json.Marshal(wo)
+			if err != nil {
+				log.Printf("Err: %v failed to marshall wo json", err)
+			} else {
+
+				expiry := "108000"
+				err := s.redisConn.SetWithExpiry(ctx, keyNameWO, string(winningOutcomesData), expiry)
+				if err != nil {
+					log.Printf("Err: %v failed to winning outcome set", err)
+				}
+			}
+
+			keyNameLS := fmt.Sprintf("%s_%s_%s", "pr_ls", sTime.Format("2006-01-02"), x.SeasonWeekID)
+			log.Printf(">>> LiveScore key saved >>>> %s", keyNameLS)
+
+			liveScoresData, err := json.Marshal(lsc)
+			if err != nil {
+				log.Printf("Err: %v failed to marshall wo json", err)
+			} else {
+
+				expiry := "108000"
+				err := s.redisConn.SetWithExpiry(ctx, keyNameLS, string(liveScoresData), expiry)
+				if err != nil {
+					log.Printf("Err: %v failed to save live score set", err)
+				}
+			}
+
+			daysListKeys := fmt.Sprintf("%s_%s", "pr_keys", sTime.Format("2006-01-02"))
+			daysListValues := fmt.Sprintf("%s_%s_%s", "pr_keys", sTime.Format("2006-01-02"), x.SeasonWeekID)
+
+			err = s.redisConn.ZAdd(ctx, daysListKeys, "1", daysListValues)
+			if err != nil {
+				log.Printf("Err: %v failed to save into todays list", err)
+			}
+
+			status := "active"
+			updated, err := s.seasonWeekMysql.UpdateSsnWeekStatus(ctx, x.SeasonWeekID, x.SeasonID, status)
+			if err != nil {
+				log.Printf("Err : %v failed to update processed season week", err)
+			}
+
+			log.Printf("updated record : %d", updated)
+		}
+	}
+
+	return nil
+}
+
+// GetUpcomingSeasonWeeks : used to return upcoming season week.
+func (s *ProcessKeyService) GetUpcomingSeasonWeeks2(ctx context.Context, oddsSortedSet, oddsu15Set string) error {
+
+	data, err := s.seasonWeekMysql.UpcomingSsnWeeks(ctx)
+	if err != nil {
+		return fmt.Errorf("err : %v failed to query upcoming season weeks ", err)
+	}
+
+	for _, x := range data {
+
+		log.Printf("x.LeagueID:%s, x.SeasonWeekID:%s, x.SeasonID:%s", x.LeagueID, x.SeasonWeekID, x.SeasonID)
+
+		n := 0
+
+		matchMap, err := s.Validate3(ctx, x.LeagueID, oddsSortedSet, oddsu15Set)
+		if err != nil {
+			log.Printf("Err : %v unable to create season week >>>>> ", err)
+		} else {
+
+			log.Println("matchMap ======>>> ", len(matchMap), " || seasonWeekData  ===> ", len(data))
+
+			//log.Printf("seasonWeekID: %s, StartTime: %s, WeekNumber:%s, Status:%s",
+			//	x.SeasonWeekID, x.StartTime, x.WeekNumber, x.Status)
+
+			// Get all matches for this week.
+
+			hh := oddsFiles.FinalSeasonWeek{}
+			wo := oddsFiles.FinalSeasonWeekWO{}
+			lsc := oddsFiles.FinalSeasonWeekLS{}
+
+			hh.SeasonWeeKID = x.SeasonWeekID
+			hh.StartTime = x.StartTime
+			hh.EndTime = x.EndTime
+			hh.MatchDay = x.WeekNumber
+			hh.SeasonID = x.SeasonID
+
+			wo.SeasonWeeKID = x.SeasonWeekID
+			wo.StartTime = x.StartTime
+			wo.EndTime = x.EndTime
+			wo.MatchDay = x.WeekNumber
+			wo.SeasonID = x.SeasonID
+
+			lsc.SeasonWeeKID = x.SeasonWeekID
+			lsc.StartTime = x.StartTime
+			lsc.EndTime = x.EndTime
+			lsc.MatchDay = x.WeekNumber
+			lsc.SeasonID = x.SeasonID
+
+			matches, err := s.matchesMysql.GetSeasonWeekGames(ctx, x.SeasonWeekID, x.SeasonID)
+			if err != nil {
+				log.Printf("Err : %v failed to query matches", err)
+			}
+
+			log.Println("matches =====>>>>>>>>", matches)
+
+			for _, g := range matches {
+
+				log.Printf("matchID:%s, homeTeamID:%s, awayTeamID:%s, seasonWeekID:%s",
+					g.MatchID, g.HomeTeamID, g.AwayTeamID, g.SeasonWeekID)
+
+				// Start creating magic here
+				//leagueID := "1"
+				homeTeamName, homeTeamAlias := s.TeamInfo(x.LeagueID, g.HomeTeamID)
+				awayTeamName, awayTeamAlias := s.TeamInfo(x.LeagueID, g.AwayTeamID)
+
+				matches := oddsFiles.FinalMatches{
+					MatchID:   g.MatchID,
+					HomeID:    g.HomeTeamID,
+					HomeAlias: homeTeamAlias,
+					HomeTeam:  homeTeamName,
+					AwayID:    g.AwayTeamID,
+					AwayAlias: awayTeamAlias,
+					AwayTeam:  awayTeamName,
+				}
+
+				woMatches := oddsFiles.FinalMatchesWO{
+					MatchID:   g.MatchID,
+					HomeID:    g.HomeTeamID,
+					HomeAlias: homeTeamAlias,
+					HomeTeam:  homeTeamName,
+					AwayID:    g.AwayTeamID,
+					AwayAlias: awayTeamAlias,
+					AwayTeam:  awayTeamName,
+				}
+
+				lsMatches := oddsFiles.FinalMatchesLS{
+					MatchID:   g.MatchID,
+					HomeID:    g.HomeTeamID,
+					HomeAlias: homeTeamAlias,
+					HomeTeam:  homeTeamName,
+					AwayID:    g.AwayTeamID,
+					AwayAlias: awayTeamAlias,
+					AwayTeam:  awayTeamName,
+				}
+
+				fd := matchMap[n]
+
+				log.Println("odds ---> ", len(fd.ValidateKeys.Odds))
+				oddsFactor := 0.01
+				mts, err := processOdds.New(fd.ValidateKeys.Odds, fd.ValidateKeys.Wo, fd.ValidateKeys.Ls, oddsFactor)
+				if err != nil {
+					log.Printf("Err : %v failed to initialize odds ", err)
+				}
+
+				mtk, winningOutcomes, liveScores, err := mts.FormulateOdds2(ctx) // FormulateOdds(ctx)
 				if err != nil {
 					log.Printf("Err : %v failed to formulate odds ", err)
 				}
@@ -333,45 +541,45 @@ func (s *ProcessKeyService) TeamInfo(leagueID string, teamID string) (string, st
 	switch leagueID {
 	case "1":
 		if teamID == "9" {
-			return "EVERTON", "EVE"
+			return "EvertonF", "EVE"
 		} else if teamID == "1" {
-			return "MANCHESTER C", "MNC"
+			return "ManchesterC", "MNC"
 		} else if teamID == "14" {
-			return "BRIGHTON", "BRT"
+			return "BrightonF", "BRT"
 		} else if teamID == "6" {
-			return "ARSENAL", "ARS"
+			return "ArsenalG", "ARS"
 		} else if teamID == "7" {
-			return "BURNLEY", "BUR"
+			return "BurnleyF", "BUR"
 		} else if teamID == "8" {
-			return "LEICESTER", "LEI"
+			return "LeicesterF", "LEI"
 		} else if teamID == "4" {
-			return "CHELSEA", "CHE"
+			return "ChelseaB", "CHE"
 		} else if teamID == "5" {
-			return "TOTTENHAM", "TOT"
+			return "TottenhamH", "TOT"
 		} else if teamID == "18" {
-			return "SOUTHAMPTON", "SOU"
+			return "SouthamptomF", "SOU"
 		} else if teamID == "13" {
-			return "NEWCASTLE", "NEW"
+			return "Newcastle", "NEW"
 		} else if teamID == "12" {
-			return "WEST HAM", "WHU"
+			return "WestHamF", "WHU"
 		} else if teamID == "3" {
-			return "LIVERPOOL", "LIV"
+			return "LiverPoolF", "LIV"
 		} else if teamID == "15" {
-			return "CRYSTAL PALACE", "CRY"
+			return "CrystalP", "CRY"
 		} else if teamID == "2" {
-			return "MANCHESTER U", "MNU"
+			return "ManchesterU", "MNU"
 		} else if teamID == "19" {
-			return "WOLVERHAMPTON", "WOV"
+			return "WolverhamptomF", "WOV"
 		} else if teamID == "17" {
-			return "ASTON V", "ARV"
+			return "AstonV", "ARV"
 		} else if teamID == "20" {
-			return "SHEFFIELD U", "SHE"
+			return "SheffieldF", "SHE"
 		} else if teamID == "16" {
-			return "FULHAM", "FUL"
+			return "FulHamF", "FUL"
 		} else if teamID == "11" {
-			return "WEST BROM", "WR"
+			return "WestBromF", "WR"
 		} else if teamID == "10" {
-			return "LEEDS", "LEE"
+			return "LeedsF", "LEE"
 		} else {
 			return "0", "0"
 		}
@@ -395,9 +603,9 @@ func (s *ProcessKeyService) TeamInfo(leagueID string, teamID string) (string, st
 		} else if teamID == "9" {
 			return "SEV", "SEV"
 		} else if teamID == "10" {
-			return "ELC", "ELC"
+			return "ESP", "ESP"
 		} else if teamID == "11" {
-			return "CAD", "CAD"
+			return "MAL", "MAL"
 		} else if teamID == "12" {
 			return "CEL", "CEL"
 		} else if teamID == "13" {
@@ -415,51 +623,47 @@ func (s *ProcessKeyService) TeamInfo(leagueID string, teamID string) (string, st
 		} else if teamID == "19" {
 			return "VLL", "VLL"
 		} else if teamID == "20" {
-			return "HUE", "HUE"
+			return "LEG", "LEG"
 		} else {
 			return "0", "0"
 		}
 	case "3":
 		if teamID == "1" {
-			return "SSC", "SSC"
+			return "GOR", "GOR"
 		} else if teamID == "2" {
-			return "AZM", "AZM"
+			return "SOF", "SOF"
 		} else if teamID == "3" {
-			return "YNG", "YNG"
+			return "BAN", "BAN"
 		} else if teamID == "4" {
-			return "NMG", "NMG"
+			return "KKG", "KKG"
 		} else if teamID == "5" {
-			return "CST", "CST"
+			return "MAT", "MAT"
 		} else if teamID == "6" {
-			return "PTZ", "PTZ"
+			return "TUS", "TUS"
 		} else if teamID == "7" {
-			return "JKT", "JKT"
+			return "SON", "SON"
 		} else if teamID == "8" {
-			return "TZP", "TZP"
+			return "ULS", "ULS"
 		} else if teamID == "9" {
-			return "KGS", "KGS"
+			return "AFC", "AFC"
 		} else if teamID == "10" {
-			return "BMU", "BMU"
+			return "KRS", "KRS"
 		} else if teamID == "11" {
-			return "RSC", "RSC"
+			return "KCB", "KCB"
 		} else if teamID == "12" {
-			return "MFC", "MFC"
+			return "NZS", "NZS"
 		} else if teamID == "13" {
-			return "LFC", "LFC"
+			return "WST", "WST"
 		} else if teamID == "14" {
-			return "MTB", "MTB"
+			return "PST", "PST"
 		} else if teamID == "15" {
-			return "KMC", "KMC"
+			return "CHM", "CHM"
 		} else if teamID == "16" {
-			return "NDA", "NDA"
+			return "VHG", "VHG"
 		} else if teamID == "17" {
-			return "MBY", "MBY"
+			return "ZOO", "ZOO"
 		} else if teamID == "18" {
-			return "ALC", "ALC"
-		} else if teamID == "19" {
-			return "MBC", "MBC"
-		} else if teamID == "20" {
-			return "SNG", "SNG"
+			return "NKT", "NKT"
 		} else {
 			return "0", "0"
 		}
@@ -495,13 +699,13 @@ func (s *ProcessKeyService) TeamInfo(leagueID string, teamID string) (string, st
 		} else if teamID == "15" {
 			return "UDI", "UDI"
 		} else if teamID == "16" {
-			return "SPE", "SPE"
+			return "SPA", "SPA"
 		} else if teamID == "17" {
 			return "BOL", "BOL"
 		} else if teamID == "18" {
-			return "CRO", "CRO"
+			return "BRE", "BRE"
 		} else if teamID == "19" {
-			return "BEN", "BEN"
+			return "LEC", "LEC"
 		} else if teamID == "20" {
 			return "VER", "VER"
 		} else {
@@ -521,7 +725,179 @@ func (s *ProcessKeyService) Validate(ctx context.Context, leagueID, oddsSortedSe
 	if leagueID == "1" || leagueID == "2" || leagueID == "4" {
 		selF = append(selF, 10)
 	} else {
+		selF = append(selF, 9)
+	}
+
+	fetched := selF[0]
+	log.Printf(" fetched +++++++>>>>>> %d", fetched)
+
+	keysList := []oddsFiles.CheckKeys{}
+	data, err := s.redisConn.GetZRangeWithLimit(ctx, oddsSortedSet, 12) // loop through with extra values to ensure each season week has all games.
+	if err != nil {
+		return m, fmt.Errorf("err : %v failed to read from %s z range", err, oddsSortedSet)
+	}
+
+	if len(data) < 10 {
+		return m, fmt.Errorf("*** There are no enough matches ready to create a seen week *** count **** %d", len(data))
+	}
+
+	num := 0
+
+	for _, o := range data {
+
+		log.Printf(">>>>>> data fetched >>>> %s", o)
+
+		if num < fetched {
+
+			yy := oddsFiles.CheckKeys{}
+			yy.OddsKey = o
+
+			parentID := strings.Split(o, "O:") // example tzO:31475633 or keO:31475634
+			if len(parentID) == 2 {
+
+				// Sanitize this matches from mysql records. Will skip if match already used in the last 7 days.
+
+				status, count, message, err := s.checkMatchesMysql.MatchExist(ctx, parentID[0], parentID[1])
+				if err != nil {
+					return m, fmt.Errorf("Err : %v on checking if match exists ", err)
+				}
+
+				log.Printf("status : %t, count : %d, message : %s", status, count, message)
+
+				// if count > 0 {
+
+				// 	_, err = s.redisConn.ZRem(ctx, oddsSortedSet, o)
+				// 	if err != nil {
+				// 		log.Printf("Err : %v failed to delete from %s z range", err, oddsSortedSet)
+				// 	}
+
+				// 	return m, fmt.Errorf("Err : %v match already used recently country : %s matchID %s ", err, parentID[0], parentID[1])
+				// }
+
+				// 1 . Find Odds
+
+				log.Printf("oddKey --> %s", o)
+				oddsData, err := s.redisConn.Get(ctx, o)
+				if err != nil {
+					return m, fmt.Errorf("Err : %v failed to get match odds from redis ", err)
+				}
+
+				// 2. Find Winning outcomes
+
+				woKey := fmt.Sprintf("%s%s%s", parentID[0], "Wo:", parentID[1])
+				log.Printf("woKey --> %s", woKey)
+				woData, err := s.redisConn.Get(ctx, woKey)
+				if err != nil {
+					return m, fmt.Errorf("Err : %v failed to get match winning outcomes from redis ", err)
+				}
+
+				// 3. Find Live scores
+
+				lsKey := fmt.Sprintf("%s%s%s", parentID[0], "Ls:", parentID[1])
+				log.Printf("lsKey --> %s", lsKey)
+				lsData, err := s.redisConn.Get(ctx, lsKey)
+				if err != nil {
+					log.Printf("Err : %v failed to get live score from redis ", err)
+				}
+
+				if len(oddsData) > 0 && len(woData) > 0 {
+					log.Printf("This data is okay to be used")
+
+					ss := oddsFiles.ValidateKeys{
+						Odds: oddsData,
+						Wo:   woData,
+						Ls:   lsData,
+					}
+
+					yy.ValidateKeys = ss
+
+					keysList = append(keysList, yy)
+
+					num++
+
+				} else {
+					// Delete this record and retry again
+					return m, fmt.Errorf("Skip this record oddKey : %s wo %s ls %s", o, woKey, lsKey)
+				}
+
+				// Save this match as used to avoid repetition in the coming days.
+
+				matchDate := time.Now().Format("2006-01-02")
+				cm, err := checkMatches.NewCheckMatches(parentID[0], parentID[1], matchDate)
+				if err != nil {
+					return m, fmt.Errorf("Err : %v failed to instantiate checkMatches struct", err)
+				}
+
+				lastID, err := s.checkMatchesMysql.Save(ctx, *cm)
+				if err != nil {
+					return m, fmt.Errorf("Err : %v failed to save into checkMatches table", err)
+				}
+
+				log.Printf("Last inserted id %d into checkMatches tbl", lastID)
+
+				_, err = s.redisConn.ZRem(ctx, oddsSortedSet, o)
+				if err != nil {
+					log.Printf("Err : %v failed to delete from %s z range", err, oddsSortedSet)
+					return m, fmt.Errorf("Err : %v failed to delete from %s z range", err, oddsSortedSet)
+				}
+
+				/*_, err = s.redisConn.ZRem(ctx, woSortedSet, woKey)
+				if err != nil {
+					log.Printf("Err : %v failed to delete from %s z range", err, woSortedSet)
+					return m, fmt.Errorf("Err : %v failed to delete from %s z range", err, woSortedSet)
+				}
+
+				_, err = s.redisConn.ZRem(ctx, liveScoreSortedSet, lsKey)
+				if err != nil {
+					log.Printf("Err : %v failed to delete from %s z range", err, liveScoreSortedSet)
+					return m, fmt.Errorf("Err : %v failed to delete from %s z range", err, liveScoreSortedSet)
+				}*/
+
+				usedOddsSortedSet := fmt.Sprintf("%s_%s", oddsSortedSet, "USED")
+				err = s.redisConn.ZAdd(ctx, usedOddsSortedSet, "1", o)
+				if err != nil {
+					log.Printf("Err : %v failed to add %s sorted set %s", err, o, liveScoreSortedSet)
+					return m, fmt.Errorf("Err : %v ailed to add %s sorted set %s", err, o, liveScoreSortedSet)
+				}
+
+			} else {
+				return m, fmt.Errorf("Data saved in bad format : %s", parentID)
+			}
+
+		} else {
+
+			//return m, fmt.Errorf("skip %s from adding this game as the season week is full ", o)
+			log.Printf("skip %s from adding this game as the season week is full ", o)
+		}
+
+	}
+
+	log.Printf("num is ---> %d | fetched ---> %d", num, fetched)
+
+	if num == fetched {
+
+		d := 0
+		for _, v := range keysList {
+			m[d] = v
+			d++
+		}
+
+		return m, nil
+
+	}
+
+	return m, fmt.Errorf("Final match count : %d not enough to create season week", len(data))
+}
+
+func (s *ProcessKeyService) Validate3(ctx context.Context, leagueID, oddsSortedSet, oddsu15Set string) (map[int]oddsFiles.CheckKeys, error) {
+
+	m := make(map[int]oddsFiles.CheckKeys)
+
+	selF := []int{}
+	if leagueID == "1" || leagueID == "2" || leagueID == "4" {
 		selF = append(selF, 10)
+	} else {
+		selF = append(selF, 9)
 	}
 
 	fetched := selF[0]
@@ -530,9 +906,9 @@ func (s *ProcessKeyService) Validate(ctx context.Context, leagueID, oddsSortedSe
 	// Get the games ration for over TG25
 
 	keysList := []oddsFiles.CheckKeys{}
-	data, err := s.DecideRatio(ctx, oddsSortedSet, fetched)
+	data, err := s.DecideRatio2(ctx, oddsSortedSet, oddsu15Set, fetched)
 	if err != nil {
-		return m, fmt.Errorf("Err : %v failed to read from %s z range", err, oddsSortedSet)
+		return m, fmt.Errorf("err : %v failed to read from %s z range", err, oddsSortedSet)
 	}
 
 	if len(data) < 10 {
@@ -633,6 +1009,7 @@ func (s *ProcessKeyService) Validate(ctx context.Context, leagueID, oddsSortedSe
 
 				tgOver25 := fmt.Sprintf("%s_%s", oddsSortedSet, "TGO25")
 				tgUnder25 := fmt.Sprintf("%s_%s", oddsSortedSet, "TGU25")
+				tgUnder15 := fmt.Sprintf("%s_%s", oddsSortedSet, "TGU15")
 				tgUnder0 := fmt.Sprintf("%s_%s", oddsSortedSet, "0")
 				tgUnder1 := fmt.Sprintf("%s_%s", oddsSortedSet, "1")
 				tgUnder2 := fmt.Sprintf("%s_%s", oddsSortedSet, "2")
@@ -646,6 +1023,12 @@ func (s *ProcessKeyService) Validate(ctx context.Context, leagueID, oddsSortedSe
 				if err != nil {
 					log.Printf("Err : %v failed to delete from %s z range", err, tgOver25)
 					return m, fmt.Errorf("Err : %v failed to delete from %s z range", err, tgOver25)
+				}
+
+				_, err = s.redisConn.ZRem(ctx, tgUnder15, o)
+				if err != nil {
+					log.Printf("Err : %v failed to delete from %s z range", err, tgUnder15)
+					return m, fmt.Errorf("Err : %v failed to delete from %s z range", err, tgUnder15)
 				}
 
 				_, err = s.redisConn.ZRem(ctx, tgUnder25, o)
@@ -728,50 +1111,288 @@ func (s *ProcessKeyService) Validate(ctx context.Context, leagueID, oddsSortedSe
 
 	}
 
-	return m, fmt.Errorf("Final match count : %d not enough to create season week", len(data))
+	return m, fmt.Errorf("final match count : %d not enough to create season week", len(data))
 }
 
-func (s *ProcessKeyService) DecideRatio(ctx context.Context, oddsSortedSet string, totalGames int) ([]string, error) {
+// TotalGoalsPerSession : this helps with distribution of total goals per match session.
+func (s *ProcessKeyService) OddsCombination(ctx context.Context) []int {
+
+	data := []int{
+		2, 2, 2, 3, 0, 0, 0, 2, 3, 4, 2, 2,
+		1, 1, 2, 2, 2, 3, 3, 3, 2, 2, 0, 3,
+		0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2,
+		3, 3, 3, 3, 4, 4, 0, 1, 1, 1, 2, 3,
+		4, 2, 3, 3, 1, 1, 0, 2, 2, 3, 3, 2,
+		3, 3, 2, 3, 3, 2, 2, 2, 2, 2, 2, 1,
+	}
+
+	return data
+}
+
+func (s *ProcessKeyService) DecideRatio(ctx context.Context, oddsSortedSet string, oddsu15Set string, totalGames int) ([]string, error) {
 
 	list := []string{}
 
+	combinations := s.OddsCombination(ctx)
+	max := len(combinations)
+	selectedCombination := rand.IntN(max)
+	log.Printf("rand picked index %d", selectedCombination)
+
+	selCombination := combinations[selectedCombination]
+	log.Printf("rand picked ov15 index %d | selected combination %d",
+		selectedCombination, selCombination)
+
+	//
+	// query over under 1.5
+	//
+
+	data, err := s.redisConn.GetZRangeWithLimit(ctx, oddsu15Set, selCombination) // To limit loss via this market
+	if err != nil {
+		return list, fmt.Errorf("err : %v failed to read from %s z range", err, oddsu15Set)
+	}
+
+	//
+	// Pick scores over 1.5 (ov25 ie 2 goals and more 0 and 1 taken care of above)
+	//
+
+	over15Limit := totalGames - selCombination //totalGames - selCombination
+
 	goals := s.TotalGoalsPerSession(ctx)
-	max := len(goals)
-	selectedRations := s.NewRandomIndexes(ctx, max)
+	maxG := len(goals)
+	selectedRations := rand.IntN(maxG)
 
-	rgO25 := goals[selectedRations[5]] + 1
-	rgU25 := totalGames - rgO25 + 1
+	rgO25 := goals[selectedRations] // + 1
+	rgU25 := over15Limit - rgO25    //+ 1
 
-	log.Printf("Selected ration tgO25 : %d | tgU25 %d", rgO25, rgU25)
+	log.Printf("Selected ration 1.5 %d tgO25 : %d | tgU25 %d", selCombination, rgO25, rgU25)
 
 	// Now figure out how the matches will be arranged randomly.
 
-	oddsOv25 := fmt.Sprintf("%s_%s", oddsSortedSet, "TGO25")
-	oddsU25 := fmt.Sprintf("%s_%s", oddsSortedSet, "TGU25")
+	oddsOv25 := fmt.Sprintf("%s_%s", oddsSortedSet, "TGO25") // sum of goals more than 2
+	oddsU25 := fmt.Sprintf("%s_%s", oddsSortedSet, "2")      // 2 goals in total ie 1-1,0-2,2-0,
 
-	data, err := s.redisConn.GetZRangeWithLimit(ctx, oddsOv25, rgO25)
+	data2, err := s.redisConn.GetZRangeWithLimit(ctx, oddsOv25, rgO25)
 	if err != nil {
-		return list, fmt.Errorf("Err : %v failed to read from %s z range", err, oddsOv25)
+		return list, fmt.Errorf("err : %v failed to read from %s z range", err, oddsOv25)
 	}
 
-	data2, err := s.redisConn.GetZRangeWithLimit(ctx, oddsU25, rgU25)
+	data3, err := s.redisConn.GetZRangeWithLimit(ctx, oddsU25, rgU25)
 	if err != nil {
-		return list, fmt.Errorf("Err : %v failed to read from %s z range", err, oddsOv25)
+		return list, fmt.Errorf("Err : %v failed to read from %s z range", err, oddsU25)
 	}
+
+	log.Println("under 1.5 list >>> ", data, "list ", oddsu15Set)
+
+	log.Println("under 2.5 list >>> ", data2, "list ", oddsU25)
+
+	log.Println("over 2.5 list >>> ", data3, "list ", oddsOv25)
 
 	for _, x := range data {
 		list = append(list, x)
 	}
 
-	for _, x := range data2 {
-		list = append(list, x)
+	for _, xx := range data2 {
+		list = append(list, xx)
+	}
+
+	for _, xxx := range data3 {
+		list = append(list, xxx)
 	}
 
 	log.Println("List before shuffle : ", list)
 
-	rand.Seed(time.Now().UnixNano())
 	for i := len(list) - 1; i > 0; i-- { // Fisher–Yates shuffle
-		j := rand.Intn(i + 1)
+		j := rand.IntN(i + 1)
+		list[i], list[j] = list[j], list[i]
+	}
+
+	log.Println("List after shuffle : ", list)
+
+	return list, nil
+
+}
+
+func (s *ProcessKeyService) DecideRatio2(ctx context.Context, oddsSortedSet string, oddsu15Set string, totalGames int) ([]string, error) {
+
+	list := []string{}
+
+	availableList := 3
+	selCategory := rand.IntN(availableList)
+	log.Printf("selCategory %d", selCategory)
+
+	combinations := s.NewOddsCombination(ctx, selCategory)
+	max := len(combinations)
+
+	selectedCombination := rand.IntN(max)
+
+	selCombination := combinations[selectedCombination]
+	log.Printf("rand picked ov15 index %d | selected combination %d",
+		selectedCombination, selCombination)
+
+	//
+	// query over under 1.5
+	//
+
+	data, err := s.redisConn.GetZRangeWithLimit(ctx, oddsu15Set, selCombination) // To limit loss via this market
+	if err != nil {
+		return list, fmt.Errorf("err : %v failed to read from %s z range", err, oddsu15Set)
+	}
+
+	//
+	// Pick scores over 1.5 (ov25 ie 2 goals and more 0 and 1 taken care of above)
+	//
+
+	over15Limit := totalGames - selCombination //totalGames - selCombination
+
+	goals := s.TotalGoalsPerSession(ctx)
+	maxG := len(goals)
+	selectedRations := rand.IntN(maxG)
+
+	rgO25 := goals[selectedRations] // + 1
+	rgU25 := over15Limit - rgO25    //+ 1
+
+	log.Printf("Selected ration 1.5 %d tgO25 : %d | tgU25 %d", selCombination, rgO25, rgU25)
+
+	// Now figure out how the matches will be arranged randomly.
+
+	oddsOv25 := fmt.Sprintf("%s_%s", oddsSortedSet, "TGO25") // sum of goals more than 2
+	oddsU25 := fmt.Sprintf("%s_%s", oddsSortedSet, "2")      // 2 goals in total ie 1-1,0-2,2-0,
+
+	data2, err := s.redisConn.GetZRangeWithLimit(ctx, oddsOv25, rgO25)
+	if err != nil {
+		return list, fmt.Errorf("err : %v failed to read from %s z range", err, oddsOv25)
+	}
+
+	data3, err := s.redisConn.GetZRangeWithLimit(ctx, oddsU25, rgU25)
+	if err != nil {
+		return list, fmt.Errorf("err : %v failed to read from %s z range", err, oddsU25)
+	}
+
+	//
+	// Add others to make sure the randomness is perfect
+	//
+
+	//
+	// End of addition
+	//
+
+	log.Println("under 1.5 list >>> ", data, "list ", oddsu15Set)
+
+	log.Println("under 2.5 list >>> ", data2, "list ", oddsU25)
+
+	log.Println("over 2.5 list >>> ", data3, "list ", oddsOv25)
+
+	for _, x := range data {
+		list = append(list, x)
+	}
+
+	for _, xx := range data2 {
+		list = append(list, xx)
+	}
+
+	for _, xxx := range data3 {
+		list = append(list, xxx)
+	}
+
+	log.Println("List before shuffle : ", list)
+
+	for i := len(list) - 1; i > 0; i-- { // Fisher–Yates shuffle
+		j := rand.IntN(i + 1)
+		list[i], list[j] = list[j], list[i]
+	}
+
+	log.Println("List after shuffle : ", list)
+
+	return list, nil
+
+}
+
+func (s *ProcessKeyService) DecideRatio3(ctx context.Context, oddsSortedSet string, oddsu15Set string, totalGames int) ([]string, error) {
+
+	list := []string{}
+
+	availableList := 3
+	selCategory := rand.IntN(availableList)
+	log.Printf("selCategory %d", selCategory)
+
+	combinations := s.NewOddsCombination(ctx, selCategory)
+	max := len(combinations)
+
+	selectedCombination := rand.IntN(max)
+
+	selCombination := combinations[selectedCombination]
+	log.Printf("rand picked ov15 index %d | selected combination %d",
+		selectedCombination, selCombination)
+
+	//
+	// query over under 1.5
+	//
+
+	data, err := s.redisConn.GetZRangeWithLimit(ctx, oddsu15Set, selCombination) // To limit loss via this market
+	if err != nil {
+		return list, fmt.Errorf("err : %v failed to read from %s z range", err, oddsu15Set)
+	}
+
+	//
+	// Pick scores over 1.5 (ov25 ie 2 goals and more 0 and 1 taken care of above)
+	//
+
+	over15Limit := totalGames - selCombination //totalGames - selCombination
+
+	goals := s.TotalGoalsPerSession(ctx)
+	maxG := len(goals)
+	selectedRations := rand.IntN(maxG)
+
+	rgO25 := goals[selectedRations] // + 1
+	rgU25 := over15Limit - rgO25    //+ 1
+
+	log.Printf("Selected ration 1.5 %d tgO25 : %d | tgU25 %d", selCombination, rgO25, rgU25)
+
+	// Now figure out how the matches will be arranged randomly.
+
+	oddsOv25 := fmt.Sprintf("%s_%s", oddsSortedSet, "TGO25") // sum of goals more than 2
+	oddsU25 := fmt.Sprintf("%s_%s", oddsSortedSet, "2")      // 2 goals in total ie 1-1,0-2,2-0,
+
+	data2, err := s.redisConn.GetZRangeWithLimit(ctx, oddsOv25, rgO25)
+	if err != nil {
+		return list, fmt.Errorf("err : %v failed to read from %s z range", err, oddsOv25)
+	}
+
+	data3, err := s.redisConn.GetZRangeWithLimit(ctx, oddsU25, rgU25)
+	if err != nil {
+		return list, fmt.Errorf("err : %v failed to read from %s z range", err, oddsU25)
+	}
+
+	//
+	// Add others to make sure the randomness is perfect
+	//
+
+	//
+	// End of addition
+	//
+
+	log.Println("under 1.5 list >>> ", data, "list ", oddsu15Set)
+
+	log.Println("under 2.5 list >>> ", data2, "list ", oddsU25)
+
+	log.Println("over 2.5 list >>> ", data3, "list ", oddsOv25)
+
+	for _, x := range data {
+		list = append(list, x)
+	}
+
+	for _, xx := range data2 {
+		list = append(list, xx)
+	}
+
+	for _, xxx := range data3 {
+		list = append(list, xxx)
+	}
+
+	log.Println("List before shuffle : ", list)
+
+	for i := len(list) - 1; i > 0; i-- { // Fisher–Yates shuffle
+		j := rand.IntN(i + 1)
 		list[i], list[j] = list[j], list[i]
 	}
 
@@ -797,16 +1418,40 @@ func (s *ProcessKeyService) TotalGoalsPerSession(ctx context.Context) []int {
 	return data
 }
 
-// NewRandomIndexes : used to create new randomization.
-func (s *ProcessKeyService) NewRandomIndexes(ctx context.Context, max int) map[int]int {
-	min := 1
+func (s *ProcessKeyService) NewOddsCombination(ctx context.Context, sel int) []int {
 
-	m := make(map[int]int)
-	for x := 0; x < 10; x++ {
-		rand.Seed(time.Now().UnixNano())
-		val := rand.Intn(max-min+1) + min
-		m[val] = val
+	if sel == 1 {
+
+		data := []int{
+			3, 2, 2, 3, 4, 1, 4, 2, 3, 4, 2, 2,
+			1, 1, 2, 4, 2, 3, 0, 3, 4, 1, 5, 3,
+			5, 1, 1, 1, 1, 2, 4, 2, 0, 4, 0, 2,
+			4, 3,
+		}
+
+		return data
+
+	} else if sel == 2 {
+
+		data := []int{
+			1, 2, 1, 5, 4, 1, 3, 5, 3, 4, 5, 1,
+			1, 1, 2, 3, 2, 5, 0, 3, 4, 1, 5, 3,
+			5, 1, 1, 5, 1, 2, 4, 2, 5, 0, 0, 2,
+			4, 3,
+		}
+
+		return data
+
+	} else {
+
+		data := []int{
+			1, 3, 3, 2, 4, 1, 4, 3, 2, 4, 3, 3,
+			1, 1, 3, 4, 3, 2, 0, 2, 4, 1, 5, 2,
+			5, 1, 1, 1, 1, 3, 4, 3, 0, 4, 0, 3,
+			4, 2,
+		}
+
+		return data
 	}
 
-	return m
 }

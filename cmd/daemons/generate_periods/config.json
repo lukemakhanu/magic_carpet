@@ -3,7 +3,7 @@
         "live": "app-user:<>##golang2019@tcp(127.0.0.1)/magic_carpet?charset=utf8"
     },
     "redis": {
-        "live": "10.229.227.35:6379",
+        "live": "127.0.0.1:6379",
         "dbNum": "4",
         "maxIdle": "500",
         "maxActive": "500",

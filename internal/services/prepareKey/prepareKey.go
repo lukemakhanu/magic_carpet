@@ -103,62 +103,201 @@ func (s *PrepareKeyService) RandomIndexes(ctx context.Context) map[int]int {
 	return m
 }
 
-// NewRandomIndexes : used to create new randomization.
-func (s *PrepareKeyService) NewRandomIndexes(ctx context.Context, max int) map[int]int {
-	min := 1
+// SelectKeys : used to select keys to be used later.
+func (s *PrepareKeyService) SelectKeys(ctx context.Context, oddsSortedSet, sanitizedKeysSet string) error {
 
-	m := make(map[int]int)
-	for x := 0; x < 50; x++ {
-		rand.Seed(time.Now().UnixNano())
-		val := rand.Intn(max-min+1) + min
-		m[val] = val
-	}
+	// Check if sanitized set has enough games for the next day.
 
-	return m
-}
-
-func (s *PrepareKeyService) ReturnOdds(ctx context.Context, oddsSortedSet string) ([]string, error) {
-
-	matches, err := s.slowRedisConn.GetZRange(ctx, oddsSortedSet)
+	sanitizedSetLen, err := s.redisConn.SortedSetLen(ctx, sanitizedKeysSet)
 	if err != nil {
-		return []string{}, fmt.Errorf("Err : %v on querying zrange for key : %s", err, oddsSortedSet)
+		return err
 	}
 
-	return matches, nil
+	if sanitizedSetLen > 28000 {
+		return fmt.Errorf("There are enough games [%d] in the sanitized list %s skip generating more ", sanitizedSetLen, sanitizedKeysSet)
+	}
 
+	// Check if oddsSortedSet has enough data to be sanitized.
+
+	selLen, err := s.redisConn.SortedSetLen(ctx, oddsSortedSet)
+	if err != nil {
+		return err
+	}
+
+	if selLen < 1000 {
+		return fmt.Errorf("There are not enough games [%d] from %s set to generate sanitized list .", selLen, oddsSortedSet)
+	}
+
+	// check if the
+
+	matches, err := s.redisConn.GetZRangeWithLimit(ctx, oddsSortedSet, 1000)
+	if err != nil {
+		return err
+	}
+
+	gamesMap := make(map[int]string)
+
+	for i, v := range matches {
+		gamesMap[i] = v
+	}
+
+	selectedGames := s.RandomIndexes(ctx)
+	log.Println("selectedGames ", selectedGames)
+
+	// Check if this games can be saved.
+
+	for i, v := range selectedGames {
+
+		// get matches from the selected batch
+		matchID := gamesMap[v]
+		log.Printf("Selected match is : %s", matchID)
+
+		parentID := strings.Split(matchID, "O:") // example tzO:31475633 or keO:31475634
+		if len(parentID) == 2 {
+
+			// Check if winning out is set for this game. if all is good save otherwise skip and go to the next
+			// This will avoid the pending games as winning outcome is not returned.
+
+			matchWoKey := fmt.Sprintf("%s%s%s", parentID[0], "Wo:", parentID[1])
+
+			selectedWo, err := s.redisConn.Get(ctx, matchWoKey)
+			if err != nil {
+				log.Printf("Err : %v unable to get wo %s from redis ", err, selectedWo)
+			} else {
+
+				var wo oddsFiles.RawWinningOutcomes
+				err = json.Unmarshal([]byte(selectedWo), &wo)
+				if err != nil {
+					log.Printf("Err : %v unable to un marshall winning outcome ", err)
+				} else {
+
+					// Proceed with normal processes.
+
+					log.Printf("RoundNumberID : %s, HomeScore : %s, AwayScore : %s", wo.RoundNumberID, wo.HomeScore, wo.AwayScore)
+
+					selWo := []string{}
+					for _, i := range wo.RawWOs {
+						log.Printf("SubTypeID : %s, OutcomeID : %s, ParentMatchID : %s", i.SubTypeID, i.OutcomeID, i.ParentMatchID)
+						selWo = append(selWo, i.Result)
+					}
+
+					if len(selWo) > 25 {
+
+						status, count, message, err := s.checkMatchesMysql.MatchExist(ctx, parentID[0], parentID[1])
+						if err != nil {
+							log.Printf("Err : %v on checking if match exists ", err)
+						} else {
+
+							log.Printf("status : %t, count : %d, message : %s", status, count, message)
+
+							if count > 0 {
+								log.Printf("Err : %v match already used recently country : %s matchID %s ", err, parentID[0], parentID[1])
+							} else {
+
+								// This match is good to be used
+								// Add this to sanitized sorted set
+
+								priority := fmt.Sprintf("%d", i)
+								err := s.redisConn.ZAdd(ctx, sanitizedKeysSet, priority, matchID)
+								if err != nil {
+									log.Printf("Err : %v unable to add %s into %s set ", err, matchID, oddsSortedSet)
+								}
+
+								usedKeys := fmt.Sprintf("%s_%s", oddsSortedSet, "USED")
+								err = s.redisConn.ZAdd(ctx, usedKeys, priority, matchID)
+								if err != nil {
+									log.Printf("Err : %v unable to add %s into %s set ", err, matchID, usedKeys)
+								}
+
+								del, err := s.redisConn.ZRem(ctx, oddsSortedSet, matchID)
+								if err != nil {
+									log.Printf("Err : %v unable to delete %s from %s set ", err, matchID, oddsSortedSet)
+								}
+
+								log.Println("deleted response ", del)
+
+								// Save record
+
+								matchDate := time.Now().Format("2006-01-02")
+								cm, err := checkMatches.NewCheckMatches(parentID[0], parentID[1], matchDate)
+								if err != nil {
+									log.Printf("Err : %v failed to instantiate checkMatches struct", err)
+								}
+
+								lastID, err := s.checkMatchesMysql.Save(ctx, *cm)
+								if err != nil {
+									log.Printf("Err : %v failed to save into checkMatches table", err)
+								}
+
+								log.Printf("Last inserted id %d into checkMatches tbl", lastID)
+
+							}
+						}
+
+					} else {
+						// Push this value as it is not correct
+
+						usedKeys := fmt.Sprintf("%s_%s", oddsSortedSet, "WRONG_FORMAT")
+						log.Printf("this key %s is is not formatted correctly ", usedKeys)
+
+						priority := fmt.Sprintf("%d", i)
+						err = s.redisConn.ZAdd(ctx, usedKeys, priority, matchID)
+						if err != nil {
+							log.Printf("Err : %v unable to add %s into %s set ", err, matchID, usedKeys)
+						}
+					}
+
+				}
+
+			}
+
+		} else {
+			log.Printf("Match saved with wrong format : %s", parentID)
+		}
+
+	}
+
+	return nil
 }
 
 // SelectKeys : used to select keys to be used later.
-func (s *PrepareKeyService) SelectKeys(ctx context.Context, oddsSortedSet, sanitizedKeysSet string, matches []string) error {
+func (s *PrepareKeyService) SelectKeys2(ctx context.Context, oddsSortedSet, sanitizedKeysSet string, matches []string) error {
 
 	// Over Under 2.5 market
 	tgOver25 := fmt.Sprintf("%s_%s", sanitizedKeysSet, "TGO25")
 	tgUnder25 := fmt.Sprintf("%s_%s", sanitizedKeysSet, "TGU25")
+	tgUnder15 := fmt.Sprintf("%s_%s", sanitizedKeysSet, "TGU15")
 
 	log.Printf("tgOver25 %s | tgUnder25 %s", tgOver25, tgUnder25)
 
 	// check len of over 25 games
 	tgOver25Len, err := s.redisConn.SortedSetLen(ctx, tgOver25)
 	if err != nil {
-		return fmt.Errorf("Err : %v failed to get zcard for key %s ", err, tgOver25)
+		return fmt.Errorf("err : %v failed to get zcard for key %s ", err, tgOver25)
 	}
 
 	// check len of under 25 games
 	tgUnder25Len, err := s.redisConn.SortedSetLen(ctx, tgUnder25)
 	if err != nil {
-		return fmt.Errorf("Err : %v failed to get zcard for key %s ", err, tgUnder25)
+		return fmt.Errorf("err : %v failed to get zcard for key %s ", err, tgUnder25)
+	}
+
+	// total goals under 1.5
+	tgUnder15Len, err := s.redisConn.SortedSetLen(ctx, tgUnder15)
+	if err != nil {
+		return fmt.Errorf("err : %v failed to get zcard for key %s ", err, tgUnder25)
 	}
 
 	// Check if sanitized set has enough games for the next day.
 
 	sanitizedSetLen, err := s.redisConn.SortedSetLen(ctx, sanitizedKeysSet)
 	if err != nil {
-		return fmt.Errorf("Err : %v failed to get zcard for key %s ", err, sanitizedKeysSet)
+		return fmt.Errorf("err : %v failed to get zcard for key %s ", err, sanitizedKeysSet)
 	}
 
-	if sanitizedSetLen > 28000 && tgOver25Len > 14000 && tgUnder25Len > 14000 {
-		return fmt.Errorf("There are enough games sanitized [%d], sanOv25 [%d], sanUn25 [%d] in the sanitized list %s skip generating more ",
-			sanitizedSetLen, tgOver25Len, tgUnder25Len, sanitizedKeysSet)
+	if sanitizedSetLen > 30000 && tgOver25Len > 15000 && tgUnder25Len > 15000 && tgUnder15Len > 4000 {
+		return fmt.Errorf("there are enough games sanitized [%d], sanOv25 [%d], sanUn25 [%d], sanUn15 [%d] in the sanitized list %s skip generating more ",
+			sanitizedSetLen, tgOver25Len, tgUnder25Len, tgUnder15Len, sanitizedKeysSet)
 	}
 
 	// Check if oddsSortedSet has enough data to be sanitized.
@@ -171,7 +310,7 @@ func (s *PrepareKeyService) SelectKeys(ctx context.Context, oddsSortedSet, sanit
 	log.Printf("oddsSortedSet len is %d", len(matches))
 
 	if len(matches) < 1000 {
-		return fmt.Errorf("There are not enough games [%d] from %s set to generate sanitized list ", len(matches), oddsSortedSet)
+		return fmt.Errorf("there are not enough games [%d] from %s set to generate sanitized list ", len(matches), oddsSortedSet)
 	}
 
 	gamesMap := make(map[int]string)
@@ -230,7 +369,7 @@ func (s *PrepareKeyService) SelectKeys(ctx context.Context, oddsSortedSet, sanit
 
 							log.Printf("status : %t, count : %d, message : %s", status, count, message)
 
-							if count > 4 { // 0
+							if count > 0 {
 								log.Printf("Err : %v match already used recently country : %s matchID %s ", err, parentID[0], parentID[1])
 							} else {
 
@@ -260,7 +399,7 @@ func (s *PrepareKeyService) SelectKeys(ctx context.Context, oddsSortedSet, sanit
 										log.Printf("Total goals %d", totalGoals)
 
 										// To control over under 2.5 market
-										if totalGoals > 3 {
+										if totalGoals > 2 {
 
 											err := s.redisConn.ZAdd(ctx, tgOver25, priority, matchID)
 											if err != nil {
@@ -286,12 +425,22 @@ func (s *PrepareKeyService) SelectKeys(ctx context.Context, oddsSortedSet, sanit
 												log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s0)
 											}
 
+											err = s.redisConn.ZAdd(ctx, tgUnder15, priority, matchID)
+											if err != nil {
+												log.Printf("Err : %v unable to add %s into %s set ", err, matchID, tgUnder15)
+											}
+
 										} else if totalGoals == 1 {
 
 											s1 := fmt.Sprintf("%s_%s", sanitizedKeysSet, "1")
 											err := s.redisConn.ZAdd(ctx, s1, priority, matchID)
 											if err != nil {
 												log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s1)
+											}
+
+											err = s.redisConn.ZAdd(ctx, tgUnder15, priority, matchID)
+											if err != nil {
+												log.Printf("Err : %v unable to add %s into %s set ", err, matchID, tgUnder15)
 											}
 
 										} else if totalGoals == 2 {
@@ -392,22 +541,27 @@ func (s *PrepareKeyService) SelectKeys(ctx context.Context, oddsSortedSet, sanit
 	return nil
 }
 
-// TotalGoalsPerSession : this helps with distribution of total goals per match session.
-func (s *PrepareKeyService) TotalGoalsPerSession(ctx context.Context) string {
+// NewRandomIndexes : used to create new randomization.
+func (s *PrepareKeyService) NewRandomIndexes(ctx context.Context, max int) map[int]int {
+	min := 1
 
-	data := []string{
-		"1", "1", "1", "1", "1",
-		"2", "2", "2", "2", "2", "2", "2", "2", "2",
-		"3", "3", "3", "3", "3", "3", "3", "3", "3", "3", "3", "3", "3", "3", "3", "3", "3", "3", "3", "3", "3", "3", "3", "3", "3", "3", "3", "3", "3", "3", "3",
-		"4", "4", "4", "4", "4", "4", "4", "4", "4", "4", "4", "4", "4",
-		"5", "5", "5", "5", "5", "5",
-		"6", "6", "6",
-		"7", "7",
-		"8",
+	m := make(map[int]int)
+	for x := 0; x < 50; x++ {
+		rand.Seed(time.Now().UnixNano())
+		val := rand.Intn(max-min+1) + min
+		m[val] = val
 	}
 
-	log.Println("data ", data)
+	return m
+}
 
-	return "3"
+func (s *PrepareKeyService) ReturnOdds(ctx context.Context, oddsSortedSet string) ([]string, error) {
+
+	matches, err := s.slowRedisConn.GetZRange(ctx, oddsSortedSet)
+	if err != nil {
+		return []string{}, fmt.Errorf("err : %v on querying zrange for key : %s", err, oddsSortedSet)
+	}
+
+	return matches, nil
 
 }

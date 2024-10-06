@@ -22,15 +22,13 @@ var addConfigPathLive = "/apps/go/magic_carpet/cmd/production_keys/"
 var addConfigPathLocal = "/apps/go/magic_carpet/cmd/production_keys/"
 
 var inProgress bool
-var inProgress2 bool
-var inProgress3 bool
 
 func main() {
 	InitConfig()
 
-	woSortedSet := viper.GetString("redis-sorted-set.winningOutcome")
-	liveScoreSortedSet := viper.GetString("redis-sorted-set.liveScore")
 	oddsSortedSet := viper.GetString("redis-sorted-set.odds")
+	oddsu15Set := viper.GetString("redis-sorted-set.oddsu15")
+	log.Printf("oddsu15Set %s", oddsu15Set)
 
 	pg, err := productionKey.NewProcessKeyService(
 		productionKey.WithMysqlMatchesRepository(viper.GetString("mySQL.live")),
@@ -40,14 +38,14 @@ func main() {
 			viper.GetInt("redis.maxIdle"), viper.GetInt("redis.maxActive"), viper.GetDuration("redis.duration")),
 	)
 	if err != nil {
-		log.Printf(" * Unable to start production keys service * : %s", err)
+		log.Printf(" **** Unable to start production keys service ***** : %s", err)
 	}
 
 	ctx := context.Background()
 
 	//matchChan := make(chan processFile.Job, 300)
 
-	ticker := time.NewTicker(3 * time.Second)
+	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 	go func() {
 		for {
@@ -56,8 +54,7 @@ func main() {
 				if !inProgress {
 					inProgress = true
 
-					oddsFactor := viper.GetFloat64("production_keys.oddsFactor")
-					SaveFinalOddsKey(ctx, pg, oddsSortedSet, woSortedSet, liveScoreSortedSet, oddsFactor)
+					SaveFinalOddsKey(ctx, pg, oddsSortedSet, oddsu15Set)
 
 				} else {
 					log.Printf("**** SaveFinalOddsKey in process **** %v.\n", t)
@@ -76,16 +73,16 @@ func main() {
 }
 
 // SaveFinalOddsKey : used to save final odds
-func SaveFinalOddsKey(ctx context.Context, sm *productionKey.ProcessKeyService, oddsSortedSet, woSortedSet, liveScoreSortedSet string, oddsFactor float64) {
+func SaveFinalOddsKey(ctx context.Context, sm *productionKey.ProcessKeyService, oddsSortedSet, oddsu15Set string) {
 
 	defer func() {
 		inProgress = false
-		log.Printf("******* Done calling SaveFinalOddsKey **** ")
+		log.Printf("******* Done calling SaveFinalOddsKey ****** ")
 	}()
 
-	err := sm.GetUpcomingSeasonWeeks(ctx, oddsSortedSet, woSortedSet, liveScoreSortedSet, oddsFactor)
+	err := sm.GetUpcomingSeasonWeeks2(ctx, oddsSortedSet, oddsu15Set)
 	if err != nil {
-		log.Printf("Err : %v failed to save production odds. ", err)
+		log.Printf("Err : %v failed to save production odds", err)
 	}
 }
 

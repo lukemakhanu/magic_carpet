@@ -22,8 +22,6 @@ var addConfigPathLive = "/apps/go/magic_carpet/cmd/prepare_keys/"
 var addConfigPathLocal = "/apps/go/magic_carpet/cmd/prepare_keys/"
 
 var inProgress bool
-var inProgress2 bool
-var inProgress3 bool
 
 func main() {
 	InitConfig()
@@ -39,7 +37,7 @@ func main() {
 			viper.GetInt("redis.maxIdle"), viper.GetInt("redis.maxActive"), viper.GetDuration("redis.duration")),
 	)
 	if err != nil {
-		log.Printf(" **** Unable to start fp prepare-keys **** : %s", err)
+		log.Printf(" **** Unable to start prepare keys service **** : %s", err)
 	}
 
 	ctx := context.Background()
@@ -61,7 +59,7 @@ func main() {
 					SelectKeys(ctx, pg, oddsSortedSet, sanitizedKeysSet, matches)
 
 				} else {
-					log.Printf("**** SelectKeys running **** %v.\n", t)
+					log.Printf("**** SelectKeys in process **** %v.\n", t)
 				}
 			}
 		}
@@ -81,10 +79,10 @@ func SelectKeys(ctx context.Context, sm *prepareKey.PrepareKeyService, oddsSorte
 
 	defer func() {
 		inProgress = false
-		log.Printf("*** done calling SelectKeys ***")
+		log.Printf("** done calling SelectKeys ** ")
 	}()
 
-	err := sm.SelectKeys(ctx, oddsSortedSet, sanitizedKeysSet, matches)
+	err := sm.SelectKeys2(ctx, oddsSortedSet, sanitizedKeysSet, matches)
 	if err != nil {
 		log.Printf("Err : %v failed to generate sanitized", err)
 	}
