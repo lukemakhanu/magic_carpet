@@ -1,0 +1,24 @@
+{
+    "mySQL": {
+        "live": "app-user:<>##golang2019@tcp(127.0.0.1)/magic_carpet?charset=utf8"
+    },
+    "mQ": {
+        "conn": "amqp://admin:password@34.105.217.96:5672/"
+    },
+    "mrq": {
+        "connName": "MATCH_RESULT_GOALS",
+        "consumerName": "MATCH_RESULT_GOALS",
+        "queueName": "MATCH_RESULT_GOALS",
+        "exchange": "MATCH_RESULT_GOALS",
+        "routing_key": "MATCH_RESULT_GOALS_RK"
+    },
+    "log_setting": {
+        "MaxSize": "100",
+        "MaxBackups": "2",
+        "MaxAge": "1",
+        "Compress": "true"
+    },
+    "totalGoals": {
+        "logs": "/var/log/odi_league_v4/totalGoals/info.log"
+    }
+}
