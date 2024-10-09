@@ -88,9 +88,9 @@ func (s *GoalPatternService) ProcessGoalPattern(ctx context.Context) error {
 
 	ss := []string{"1", "2", "3", "4"}
 
-	m := make(map[string][]int)
-
 	for _, c := range ss {
+
+		m := make(map[int]int)
 
 		data, err := s.mrsMysql.GoalPatterns(ctx, c)
 		if err != nil {
@@ -98,28 +98,20 @@ func (s *GoalPatternService) ProcessGoalPattern(ctx context.Context) error {
 		}
 
 		for _, x := range data {
-
-			compList := fmt.Sprintf("%s_%s", "comp", c)
-
-			m[compList] = append(m[compList], x.RoundNumberID) //x.RoundNumberID
-
+			m[x.RoundNumberID] = x.RoundNumberID
 		}
 
-	}
-
-	for _, c := range ss {
-
-		compList := fmt.Sprintf("%s_%s", "comp", c)
+		// push this ids into list
 
 		comp := []int{}
-		for _, v := range m[compList] {
+		for _, v := range m {
 			comp = append(comp, v)
 		}
 
 		dd := s.GoalChunks(comp, 38)
 
-		for d, x := range dd {
-			log.Println(">> d ", d, " >> xx selected ", x)
+		for a, x := range dd {
+			log.Println("competition ", c, " id ", a, " >> xx selected ", x)
 		}
 
 	}
