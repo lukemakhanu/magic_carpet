@@ -75,7 +75,7 @@ func (s *ConsumeMatchResultService) SaveMatchResult(ctx context.Context, ch chan
 			log.Printf("Unable to total count: %v", err)
 		} else {
 
-			log.Printf("RoundNumberID : %s | CompetitionID : %s | StartTime : %s TotalGoals : %s | GoalCount : %s",
+			log.Printf("RoundNumberID : %d | CompetitionID : %s | StartTime : %s TotalGoals : %s | GoalCount : %s",
 				l.RoundNumberID, l.CompetitionID, l.StartTime, l.TotalGoals, l.GoalCount)
 
 			dd, err := mrs.NewMrs(l.RoundNumberID, l.TotalGoals, l.GoalCount, l.CompetitionID, l.StartTime)

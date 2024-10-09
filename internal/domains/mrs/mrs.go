@@ -5,9 +5,9 @@ import (
 	"time"
 )
 
-func NewMrs(roundNumberID, totalGoals, goalCount, competitionID, startTime string) (*Mrs, error) {
+func NewMrs(roundNumberID int, totalGoals, goalCount, competitionID, startTime string) (*Mrs, error) {
 
-	if roundNumberID == "" {
+	if roundNumberID <= 0 {
 		return &Mrs{}, fmt.Errorf("roundNumberID not set")
 	}
 
