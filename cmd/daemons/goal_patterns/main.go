@@ -28,6 +28,7 @@ func main() {
 
 	pg, err := goalPattern.NewGoalPatternService(
 		goalPattern.WithMysqlMrsRepository(viper.GetString("mySQL.live")),
+		goalPattern.WithMysqGoalPatternsRepository(viper.GetString("mySQL.live")),
 		goalPattern.WithRedisRepository(viper.GetString("redis.live"), viper.GetInt("redis.dbNum"),
 			viper.GetInt("redis.maxIdle"), viper.GetInt("redis.maxActive"), viper.GetDuration("redis.duration")),
 		goalPattern.WithSlowRedisRepository(viper.GetString("redis.live"), viper.GetInt("redis.dbNum"),

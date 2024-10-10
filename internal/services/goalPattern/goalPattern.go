@@ -6,6 +6,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/lukemakhanu/magic_carpet/internal/domains/goalPatterns"
+	"github.com/lukemakhanu/magic_carpet/internal/domains/goalPatterns/goalPatternsMysql"
 	"github.com/lukemakhanu/magic_carpet/internal/domains/mrs"
 	"github.com/lukemakhanu/magic_carpet/internal/domains/mrs/mrsMysql"
 	"github.com/lukemakhanu/magic_carpet/internal/domains/processRedis"
@@ -27,9 +29,10 @@ type GoalPatternConfiguration func(os *GoalPatternService) error
 
 // GoalPatternService is a implementation of the GoalPatternService
 type GoalPatternService struct {
-	redisConn     processRedis.RunRedis
-	slowRedisConn slowRedis.SlowRedis
-	mrsMysql      mrs.MrsRepository
+	redisConn         processRedis.RunRedis
+	slowRedisConn     slowRedis.SlowRedis
+	mrsMysql          mrs.MrsRepository
+	goalPatternsMysql goalPatterns.GoalPatternsRepository
 }
 
 // NewGoalPatternService : instantiate every connection we need to run current game service
@@ -83,6 +86,18 @@ func WithMysqlMrsRepository(connectionString string) GoalPatternConfiguration {
 	}
 }
 
+// WithMysqlMrsRepository : instantiates mysql to connect to matches interface
+func WithMysqGoalPatternsRepository(connectionString string) GoalPatternConfiguration {
+	return func(os *GoalPatternService) error {
+		d, err := goalPatternsMysql.New(connectionString)
+		if err != nil {
+			return err
+		}
+		os.goalPatternsMysql = d
+		return nil
+	}
+}
+
 // ProcessGoalPattern : used to select keys to be used later.
 func (s *GoalPatternService) ProcessGoalPattern(ctx context.Context) error {
 
@@ -112,6 +127,26 @@ func (s *GoalPatternService) ProcessGoalPattern(ctx context.Context) error {
 
 		for a, x := range dd {
 			log.Println("competition ", c, " id ", a, " >> xx selected ", x)
+
+			for _, rnID := range x {
+
+				// Save into database
+				seasonID := fmt.Sprintf("%d", a)
+				roundNumberID := fmt.Sprintf("%d", rnID)
+				dd, err := goalPatterns.NewGoalPatterns(seasonID, roundNumberID, c)
+				if err != nil {
+					return fmt.Errorf("err : %v failed to initialize goal pattern ", err)
+				}
+
+				lastID, err := s.goalPatternsMysql.Save(ctx, *dd)
+				if err != nil {
+					return fmt.Errorf("err : %v failed to save a goal pattern ", err)
+				}
+
+				log.Printf("lastID : %d", lastID)
+
+			}
+
 		}
 
 	}
