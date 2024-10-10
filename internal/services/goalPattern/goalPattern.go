@@ -139,27 +139,22 @@ func (s *GoalPatternService) ProcessGoalPattern(ctx context.Context) error {
 
 				log.Printf("proceed as we have the correct number of games")
 
-				dd := strings.Join(ff, ",")
-				log.Printf("competitionID %s | number %d | games %s", c, a, dd)
-
-				///for _, rnID := range x {
+				roundNumberIDs := strings.Join(ff, ",")
+				log.Printf("competitionID %s | number %d | games %s", c, a, roundNumberIDs)
 
 				// // Save into database
-				// seasonID := fmt.Sprintf("%d", a)
-				// roundNumberID := fmt.Sprintf("%d", rnID)
-				// dd, err := goalPatterns.NewGoalPatterns(seasonID, roundNumberID, c)
-				// if err != nil {
-				// 	return fmt.Errorf("err : %v failed to initialize goal pattern ", err)
-				// }
+				seasonID := fmt.Sprintf("%d", a)
+				dd, err := goalPatterns.NewGoalPatterns(seasonID, roundNumberIDs, c)
+				if err != nil {
+					return fmt.Errorf("err : %v failed to initialize goal pattern ", err)
+				}
 
-				// lastID, err := s.goalPatternsMysql.Save(ctx, *dd)
-				// if err != nil {
-				// 	return fmt.Errorf("err : %v failed to save a goal pattern ", err)
-				// }
+				lastID, err := s.goalPatternsMysql.Save(ctx, *dd)
+				if err != nil {
+					return fmt.Errorf("err : %v failed to save a goal pattern ", err)
+				}
 
-				// log.Printf("lastID : %d", lastID)
-
-				//}
+				log.Printf("lastID : %d", lastID)
 
 			} else {
 				log.Printf("Skip, we have less games...")
