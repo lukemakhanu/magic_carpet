@@ -216,10 +216,6 @@ func (s *GeneratePeriodService) PrepareGames(ctx context.Context, locale *time.L
 
 					parentIDs := strings.Split(selectedBatch.RoundNumberID, ",")
 
-					if len(goalDistribution) != 38 {
-						return fmt.Errorf("err : %v there are no enough goal distribution | available %d", err, len(goalDistribution))
-					}
-
 					if len(parentIDs) != 38 {
 						return fmt.Errorf("err : %v there round number ids returned arent enough %d", err, len(parentIDs))
 					}
