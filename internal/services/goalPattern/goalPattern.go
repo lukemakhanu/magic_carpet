@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/lukemakhanu/magic_carpet/internal/domains/goalPatterns"
@@ -128,23 +129,40 @@ func (s *GoalPatternService) ProcessGoalPattern(ctx context.Context) error {
 		for a, x := range dd {
 			log.Println("competition ", c, " id ", a, " >> xx selected ", x)
 
-			for _, rnID := range x {
+			if len(x) == 38 {
 
-				// Save into database
-				seasonID := fmt.Sprintf("%d", a)
-				roundNumberID := fmt.Sprintf("%d", rnID)
-				dd, err := goalPatterns.NewGoalPatterns(seasonID, roundNumberID, c)
-				if err != nil {
-					return fmt.Errorf("err : %v failed to initialize goal pattern ", err)
+				ff := []string{}
+				for _, r := range x {
+					gg := fmt.Sprintf("%d", r)
+					ff = append(ff, gg)
 				}
 
-				lastID, err := s.goalPatternsMysql.Save(ctx, *dd)
-				if err != nil {
-					return fmt.Errorf("err : %v failed to save a goal pattern ", err)
-				}
+				log.Printf("proceed as we have the correct number of games")
 
-				log.Printf("lastID : %d", lastID)
+				dd := strings.Join(ff, ",")
+				log.Printf("competitionID %s | number %d | games %s", c, a, dd)
 
+				///for _, rnID := range x {
+
+				// // Save into database
+				// seasonID := fmt.Sprintf("%d", a)
+				// roundNumberID := fmt.Sprintf("%d", rnID)
+				// dd, err := goalPatterns.NewGoalPatterns(seasonID, roundNumberID, c)
+				// if err != nil {
+				// 	return fmt.Errorf("err : %v failed to initialize goal pattern ", err)
+				// }
+
+				// lastID, err := s.goalPatternsMysql.Save(ctx, *dd)
+				// if err != nil {
+				// 	return fmt.Errorf("err : %v failed to save a goal pattern ", err)
+				// }
+
+				// log.Printf("lastID : %d", lastID)
+
+				//}
+
+			} else {
+				log.Printf("Skip, we have less games...")
 			}
 
 		}
