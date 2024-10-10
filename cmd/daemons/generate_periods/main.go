@@ -29,6 +29,8 @@ func main() {
 	pg, err := generatePeriod.NewGeneratePeriodService(
 		generatePeriod.WithMysqlSsnsRepository(viper.GetString("mySQL.live")),
 		generatePeriod.WithMysqlScheduledTimeRepository(viper.GetString("mySQL.live")),
+		generatePeriod.WithMysqlGoalPatternsRepository(viper.GetString("mySQL.live")),
+		generatePeriod.WithMysqlSnWkPtsRepository(viper.GetString("mySQL.live")),
 		generatePeriod.WithRedisRepository(viper.GetString("redis.live"), viper.GetInt("redis.dbNum"),
 			viper.GetInt("redis.maxIdle"), viper.GetInt("redis.maxActive"), viper.GetDuration("redis.duration")),
 	)

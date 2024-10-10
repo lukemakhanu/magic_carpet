@@ -4,13 +4,18 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand/v2"
 	"strings"
 	"time"
 
+	"github.com/lukemakhanu/magic_carpet/internal/domains/goalPatterns"
+	"github.com/lukemakhanu/magic_carpet/internal/domains/goalPatterns/goalPatternsMysql"
 	"github.com/lukemakhanu/magic_carpet/internal/domains/processRedis"
 	"github.com/lukemakhanu/magic_carpet/internal/domains/processRedis/redisExec"
 	"github.com/lukemakhanu/magic_carpet/internal/domains/scheduledTimes"
 	scheduledTimeMysql "github.com/lukemakhanu/magic_carpet/internal/domains/scheduledTimes/scheduledTimesMysql"
+	"github.com/lukemakhanu/magic_carpet/internal/domains/snwkpts"
+	"github.com/lukemakhanu/magic_carpet/internal/domains/snwkpts/snwkptsMysql"
 	"github.com/lukemakhanu/magic_carpet/internal/domains/ssns"
 	"github.com/lukemakhanu/magic_carpet/internal/domains/ssns/ssnsMysql"
 )
@@ -22,6 +27,8 @@ type GeneratePeriodService struct {
 	ssnsMysql          ssns.SsnsRepository
 	scheduledTimeMysql scheduledTimes.ScheduledTimesRepository
 	redisConn          processRedis.RunRedis
+	goalPatternsMysql  goalPatterns.GoalPatternsRepository
+	snwkptsMysql       snwkpts.SnWkPtsRepository
 }
 
 func NewGeneratePeriodService(cfgs ...GeneratePeriodConfiguration) (*GeneratePeriodService, error) {
@@ -64,6 +71,28 @@ func WithRedisRepository(redisServer string, dbNum int, maxIdle int, maxActive i
 			return err
 		}
 		os.redisConn = d
+		return nil
+	}
+}
+
+func WithMysqlGoalPatternsRepository(connectionString string) GeneratePeriodConfiguration {
+	return func(os *GeneratePeriodService) error {
+		d, err := goalPatternsMysql.New(connectionString)
+		if err != nil {
+			return err
+		}
+		os.goalPatternsMysql = d
+		return nil
+	}
+}
+
+func WithMysqlSnWkPtsRepository(connectionString string) GeneratePeriodConfiguration {
+	return func(os *GeneratePeriodService) error {
+		d, err := snwkptsMysql.New(connectionString)
+		if err != nil {
+			return err
+		}
+		os.snwkptsMysql = d
 		return nil
 	}
 }
@@ -120,7 +149,7 @@ func (s *GeneratePeriodService) PrepareGames(ctx context.Context, locale *time.L
 
 	count, err := s.ssnsMysql.CountRemainingPeriods(ctx, competitionID)
 	if err != nil {
-		return fmt.Errorf("Err :: %v ", err)
+		return fmt.Errorf("err :: %v ", err)
 	}
 
 	x := 0
@@ -144,17 +173,17 @@ func (s *GeneratePeriodService) PrepareGames(ctx context.Context, locale *time.L
 
 			gTime, err := time.Parse("2006-01-02 15:04:05", scheduledTime)
 			if err != nil {
-				return fmt.Errorf("Err : %v on converting string to time..", err)
+				return fmt.Errorf("err : %v on converting string to time..", err)
 			}
 
 			ssn, err := ssns.NewSsns(competitionID, status)
 			if err != nil {
-				return fmt.Errorf("Err : %v failed to instantiate a new season", err)
+				return fmt.Errorf("err : %v failed to instantiate a new season", err)
 			}
 
 			ssnID, err := s.ssnsMysql.Save(ctx, *ssn)
 			if err != nil {
-				return fmt.Errorf("Err : %v failed to save a new ssns", err)
+				return fmt.Errorf("err : %v failed to save a new ssns", err)
 			}
 
 			if ssnID > 0 {
@@ -164,6 +193,43 @@ func (s *GeneratePeriodService) PrepareGames(ctx context.Context, locale *time.L
 					log.Printf("Proceed to saving the rest of the data..")
 
 					// For each season create 38 season weeks.
+
+					// At this point select the patterns to use for this games
+					// We get 38 patterns, put them in a map and use them below
+					// to decide how goals will be destributed.
+
+					goalDistribution, err := s.goalPatternsMysql.GoalDistributions(ctx, competitionID)
+					if err != nil {
+						return fmt.Errorf("err : %v failed to return goal distribution", err)
+					}
+
+					if len(goalDistribution) == 0 {
+						return fmt.Errorf("err : %v no goal distribution returned %d", err, len(goalDistribution))
+					}
+
+					availableList := len(goalDistribution)
+					selCategory := rand.IntN(availableList)
+
+					selectedBatch := goalDistribution[selCategory]
+
+					log.Println("selCategory", selCategory, "selectedBatch >>>> ", selectedBatch)
+
+					parentIDs := strings.Split(selectedBatch.RoundNumberID, ",")
+
+					if len(goalDistribution) != 38 {
+						return fmt.Errorf("err : %v there are no enough goal distribution | available %d", err, len(goalDistribution))
+					}
+
+					if len(parentIDs) != 38 {
+						return fmt.Errorf("err : %v there round number ids returned arent enough %d", err, len(parentIDs))
+					}
+
+					distr := make(map[int]string)
+					kk := 1
+					for _, f := range parentIDs {
+						distr[kk] = f
+						kk++
+					}
 
 					for h := 1; h <= 38; h++ {
 
@@ -175,7 +241,7 @@ func (s *GeneratePeriodService) PrepareGames(ctx context.Context, locale *time.L
 
 							enTime, err := time.Parse("2006-01-02 15:04:05", startTime)
 							if err != nil {
-								return fmt.Errorf("Err getting minute scored : %v", err)
+								return fmt.Errorf("err getting minute scored : %v", err)
 							}
 
 							matchDuration := 35
@@ -187,10 +253,25 @@ func (s *GeneratePeriodService) PrepareGames(ctx context.Context, locale *time.L
 
 							swID, err := s.ssnsMysql.SaveSsnWeek(ctx, competitionID, seasonID, weekNumber, status, startTime, endTime) //seasonWeeks.NewSeasonWeeks(seasonID, weekNumber, status, startTime, endTime)
 							if err != nil {
-								return fmt.Errorf("Err : %v failed to save season week.", err)
+								return fmt.Errorf("err : %v failed to save season week.", err)
 							}
 
 							ssnWkID := fmt.Sprintf("%d", swID)
+
+							// Add goal distribution
+
+							rnID := distr[h]
+							gg, err := snwkpts.NewSnWkPts(ssnWkID, rnID, competitionID)
+							if err != nil {
+								return fmt.Errorf("err : %v failed to instantiate snWkPts", err)
+							}
+
+							snwkptID, err := s.snwkptsMysql.Save(ctx, *gg)
+							if err != nil {
+								return fmt.Errorf("err : %v failed to save snWkPts", err)
+							}
+
+							log.Printf("last snwkptID %d", snwkptID)
 
 							// Get this data from redis (ssn weeks)
 

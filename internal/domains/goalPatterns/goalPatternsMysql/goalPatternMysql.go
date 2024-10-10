@@ -53,3 +53,31 @@ func (mr *MysqlRepository) Save(ctx context.Context, t goalPatterns.GoalPatterns
 
 	return int(lastInsertedID), nil
 }
+
+// GoalDistributions :
+func (r *MysqlRepository) GoalDistributions(ctx context.Context, competitionID string) ([]goalPatterns.GoalPatterns, error) {
+	var gc []goalPatterns.GoalPatterns
+
+	statement := fmt.Sprintf("select goal_pattern_id,season_id,round_number_id,competition_id from goal_patterns \n"+
+		"where competition_id = '%s'   ", competitionID)
+	raws, err := r.db.Query(statement)
+	if err != nil {
+		return nil, err
+	}
+
+	for raws.Next() {
+		var g goalPatterns.GoalPatterns
+		err := raws.Scan(&g.GoalPatternID, &g.SeasonID, &g.RoundNumberID, &g.CompetitionID)
+		if err != nil {
+			return nil, err
+		}
+		gc = append(gc, g)
+	}
+
+	if err = raws.Err(); err != nil {
+		return nil, err
+	}
+	raws.Close()
+
+	return gc, nil
+}
