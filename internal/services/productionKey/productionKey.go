@@ -1679,25 +1679,30 @@ func (s *ProcessKeyService) DecideRatio2(ctx context.Context, oddsSortedSet stri
 
 		matchCount, err := strconv.Atoi(d.GoalCount)
 		if err != nil {
-			return list, fmt.Errorf("err : %v failed to convert matchCount", err, matchCount)
+			return list, fmt.Errorf("err : %v failed to convert matchCount", err)
 		}
 		ss += matchCount
 
 	}
 
+	log.Printf("ss returned %d", ss)
+
 	if competitionID == "1" || competitionID == "2" || competitionID == "4" {
 
 		if ss != 10 {
-			return list, fmt.Errorf("Number of games %s | available %s", "10", ss)
+			return list, fmt.Errorf("Number of games %s | available %d", "10", ss)
 		}
 
 	} else {
 
 		if ss != 9 {
-			return list, fmt.Errorf("Number of games %s | available %s", "9", ss)
+			return list, fmt.Errorf("Number of games %s | available %d", "9", ss)
 		}
 
 	}
+
+	log.Printf("*** I get here ***")
+	log.Println("*** data returned ***", distr)
 
 	// Query the games from Redis now
 	for _, d := range distr {
@@ -1706,13 +1711,16 @@ func (s *ProcessKeyService) DecideRatio2(ctx context.Context, oddsSortedSet stri
 
 		matchCountLimit, err := strconv.Atoi(d.GoalCount)
 		if err != nil {
-			return list, fmt.Errorf("err : %v failed to convert matchCount >>> ", err, matchCountLimit)
+			return list, fmt.Errorf("err : %v failed to convert matchCount >>> ", err)
 		}
 
+		log.Printf("totalGoalsSet : %s, matchCountLimit : %d", totalGoalsSet, matchCountLimit)
 		data, err := s.redisConn.GetZRangeWithLimit(ctx, totalGoalsSet, matchCountLimit)
 		if err != nil {
-			return list, fmt.Errorf("err : %v failed to read from %s z range", err, matchCountLimit)
+			return list, fmt.Errorf("err : %v failed to read from %d z range", err, matchCountLimit)
 		}
+
+		log.Println("data returned : ", data)
 
 		for _, xx := range data {
 			list = append(list, xx)
