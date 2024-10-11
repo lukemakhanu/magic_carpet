@@ -34,6 +34,7 @@ func main() {
 		productionKey.WithMysqlMatchesRepository(viper.GetString("mySQL.live")),
 		productionKey.WithMysqlSeasonWeeksRepository(viper.GetString("mySQL.live")),
 		productionKey.WithMysqlCheckMatchesRepository(viper.GetString("mySQL.live")),
+		productionKey.WithMysqlMrsRepository(viper.GetString("mySQL.live")),
 		productionKey.WithRedisRepository(viper.GetString("redis.live"), viper.GetInt("redis.dbNum"),
 			viper.GetInt("redis.maxIdle"), viper.GetInt("redis.maxActive"), viper.GetDuration("redis.duration")),
 	)
@@ -80,7 +81,7 @@ func SaveFinalOddsKey(ctx context.Context, sm *productionKey.ProcessKeyService, 
 		log.Printf("******* Done calling SaveFinalOddsKey ****** ")
 	}()
 
-	err := sm.GetUpcomingSeasonWeeks2(ctx, oddsSortedSet, oddsu15Set)
+	err := sm.GetUpcomingSeasonWeeks3(ctx, oddsSortedSet, oddsu15Set)
 	if err != nil {
 		log.Printf("Err : %v failed to save production odds >>>> ", err)
 	}

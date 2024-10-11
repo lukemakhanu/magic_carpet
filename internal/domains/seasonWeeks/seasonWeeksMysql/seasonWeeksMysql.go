@@ -272,6 +272,41 @@ func (r *MysqlRepository) UpcomingSsnWeeks(ctx context.Context) ([]seasonWeeks.S
 	return gc, nil
 }
 
+// UpcomingSsnWeeks2 : used to return games for just one league for test environment
+func (r *MysqlRepository) UpcomingSsnWeeks2(ctx context.Context) ([]seasonWeeks.SeasonWkDetails, error) {
+	var gc []seasonWeeks.SeasonWkDetails
+
+	statement := fmt.Sprintf("select sw.season_week_id,sw.season_id,s.league_id,sw.week_number,sw.status,\n" +
+		"sw.start_time, sw.end_time,pt.round_number_id,pt.competition_id, sw.created,sw.modified \n" +
+		"from sn_wks as sw \n" +
+		"inner join sns as s on sw.season_id=s.season_id \n" +
+		"inner join sn_wk_pts as pt on pt.season_week_id = sw.season_week_id \n" +
+		"where sw.status= 'inactive' \n" +
+		"and sw.start_time > now() + interval 2 minute \n" +
+		"order by sw.start_time asc limit 50;")
+
+	raws, err := r.db.Query(statement)
+	if err != nil {
+		return nil, err
+	}
+
+	for raws.Next() {
+		var g seasonWeeks.SeasonWkDetails
+		err := raws.Scan(&g.SeasonWeekID, &g.SeasonID, &g.LeagueID, &g.WeekNumber, &g.Status, &g.StartTime, &g.EndTime, &g.RoundNumberID, &g.CompetitionID, &g.Created, &g.Modified)
+		if err != nil {
+			return nil, err
+		}
+		gc = append(gc, g)
+	}
+
+	if err = raws.Err(); err != nil {
+		return nil, err
+	}
+	raws.Close()
+
+	return gc, nil
+}
+
 // UpdateSsnWeekStatus :
 func (mr *MysqlRepository) UpdateSsnWeekStatus(ctx context.Context, seasonWeekID, seasonID, status string) (int64, error) {
 	var rs int64

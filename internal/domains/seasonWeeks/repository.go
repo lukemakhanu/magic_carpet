@@ -18,4 +18,6 @@ type SeasonWeeksRepository interface {
 	UpdateSsnWeekStatus(ctx context.Context, seasonWeekID, seasonID, status string) (int64, error)
 
 	ApiSsnWeeksNew(ctx context.Context, seasonID string) ([]ProductionSeasonWeeksAPI, error)
+
+	UpcomingSsnWeeks2(ctx context.Context) ([]SeasonWkDetails, error)
 }

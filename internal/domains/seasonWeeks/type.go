@@ -47,6 +47,20 @@ type SeasonWeekDetails struct {
 	Modified     string
 }
 
+type SeasonWkDetails struct {
+	SeasonWeekID  string
+	SeasonID      string
+	LeagueID      string
+	WeekNumber    string
+	Status        string
+	StartTime     string
+	EndTime       string
+	CompetitionID string
+	RoundNumberID string
+	Created       string
+	Modified      string
+}
+
 // SeasonWeeksAPI :
 type SeasonWeeksAPI struct {
 	SeasonWeekID string

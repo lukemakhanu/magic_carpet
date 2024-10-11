@@ -81,3 +81,32 @@ func (r *MysqlRepository) GoalPatterns(ctx context.Context, competitionID string
 
 	return gc, nil
 }
+
+// GoalDistribution : pull the distribution to use
+func (r *MysqlRepository) GoalDistribution(ctx context.Context, roundNumberID, competitionID string) ([]mrs.Mrs, error) {
+	var gc []mrs.Mrs
+	statement := fmt.Sprintf("select mr_id,round_number_id,competition_id,start_time,total_goals,goal_count \n"+
+		" from mrs where competition_id = '%s' and round_number_id = '%s' ",
+		competitionID, roundNumberID)
+
+	raws, err := r.db.Query(statement)
+	if err != nil {
+		return nil, err
+	}
+
+	for raws.Next() {
+		var g mrs.Mrs
+		err := raws.Scan(&g.MrID, &g.RoundNumberID, &g.CompetitionID, &g.StartTime, &g.TotalGoals, &g.GoalCount)
+		if err != nil {
+			return nil, err
+		}
+		gc = append(gc, g)
+	}
+
+	if err = raws.Err(); err != nil {
+		return nil, err
+	}
+	raws.Close()
+
+	return gc, nil
+}
