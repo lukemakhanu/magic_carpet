@@ -1691,25 +1691,122 @@ func (s *ProcessKeyService) DecideRatio2(ctx context.Context, oddsSortedSet stri
 
 	log.Printf("ss returned %d", ss)
 
+	// Sanitize the list before proceeding.
+
+	sanitizedGoals := []mrs.Mrs{}
+
 	if competitionID == "1" || competitionID == "2" || competitionID == "4" {
 
 		if ss != 10 {
-			return list, fmt.Errorf("Number of games %s | available %d", "10", ss)
+
+			divider := ss / 10
+
+			for _, r := range distr {
+
+				matchCount, err := strconv.Atoi(r.GoalCount)
+				if err != nil {
+					return list, fmt.Errorf("err : %v failed to convert matchCount", err)
+				}
+
+				accurateCount := matchCount / divider
+				log.Printf("final Goal count %d", accurateCount)
+
+				goalCount := fmt.Sprintf("%d", accurateCount)
+
+				dd := mrs.Mrs{
+					MrID:          r.MrID,
+					RoundNumberID: r.RoundNumberID,
+					TotalGoals:    r.TotalGoals,
+					GoalCount:     goalCount,
+					StartTime:     r.StartTime,
+					CompetitionID: r.CompetitionID,
+					Created:       r.CompetitionID,
+					Modified:      r.Modified,
+				}
+
+				sanitizedGoals = append(sanitizedGoals, dd)
+			}
+
+		} else {
+
+			for _, r := range distr {
+				sanitizedGoals = append(sanitizedGoals, r)
+			}
 		}
 
 	} else {
 
 		if ss != 9 {
-			return list, fmt.Errorf("Number of games %s | available %d", "9", ss)
+
+			divider := ss / 9
+
+			for _, r := range distr {
+
+				matchCount, err := strconv.Atoi(r.GoalCount)
+				if err != nil {
+					return list, fmt.Errorf("err : %v failed to convert matchCount", err)
+				}
+
+				accurateCount := matchCount / divider
+				log.Printf("final Goal count %d", accurateCount)
+
+				goalCount := fmt.Sprintf("%d", accurateCount)
+
+				dd := mrs.Mrs{
+					MrID:          r.MrID,
+					RoundNumberID: r.RoundNumberID,
+					TotalGoals:    r.TotalGoals,
+					GoalCount:     goalCount,
+					StartTime:     r.StartTime,
+					CompetitionID: r.CompetitionID,
+					Created:       r.CompetitionID,
+					Modified:      r.Modified,
+				}
+
+				sanitizedGoals = append(sanitizedGoals, dd)
+			}
+
+		} else {
+
+			for _, r := range distr {
+				sanitizedGoals = append(sanitizedGoals, r)
+			}
+
+		}
+	}
+
+	sanitizedList := 0
+	for _, d := range sanitizedGoals {
+
+		matchCount, err := strconv.Atoi(d.GoalCount)
+		if err != nil {
+			return list, fmt.Errorf("err : %v failed to convert matchCount", err)
+		}
+		sanitizedList += matchCount
+
+	}
+
+	log.Printf("sanitizedList returned %d", sanitizedList)
+
+	if competitionID == "1" || competitionID == "2" || competitionID == "4" {
+
+		if ss != 10 {
+			return list, fmt.Errorf("number of games %s | available %d", "10", ss)
+		}
+
+	} else {
+
+		if ss != 9 {
+			return list, fmt.Errorf("number of games %s | available %d", "9", ss)
 		}
 
 	}
 
 	log.Printf("*** I get here ***")
-	log.Println("*** data returned ***", distr)
+	log.Println("*** data returned after cleanup ***", sanitizedGoals)
 
 	// Query the games from Redis now
-	for _, d := range distr {
+	for _, d := range sanitizedGoals {
 
 		totalGoalsSet := fmt.Sprintf("%s_%s", oddsSortedSet, d.TotalGoals) // Eg 0,1,2,3,4,5,6
 
