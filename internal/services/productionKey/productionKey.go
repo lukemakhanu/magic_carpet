@@ -1368,7 +1368,11 @@ func (s *ProcessKeyService) Validate4(ctx context.Context, leagueID, oddsSortedS
 		return m, fmt.Errorf("err : %v failed to read from %s z range", err, oddsSortedSet)
 	}
 
-	if len(data) < 10 {
+	if len(data) < 10 && fetched == 10 {
+		return m, fmt.Errorf("*** There are no enough matches ready to create a seen week *** count **** %d", len(data))
+	}
+
+	if len(data) < 9 && fetched == 9 {
 		return m, fmt.Errorf("*** There are no enough matches ready to create a seen week *** count **** %d", len(data))
 	}
 
