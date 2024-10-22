@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func NewMrs(roundNumberID int, totalGoals, goalCount, competitionID, startTime string) (*Mrs, error) {
+func NewMrs(roundNumberID int, totalGoals, goalCount, competitionID, startTime, rawScores string) (*Mrs, error) {
 
 	if roundNumberID <= 0 {
 		return &Mrs{}, fmt.Errorf("roundNumberID not set")
@@ -27,6 +27,10 @@ func NewMrs(roundNumberID int, totalGoals, goalCount, competitionID, startTime s
 		return &Mrs{}, fmt.Errorf("startTime not set")
 	}
 
+	if rawScores == "" {
+		return &Mrs{}, fmt.Errorf("rawScores not set")
+	}
+
 	created := time.Now().Format("2006-01-02 15:04:05")
 	modified := time.Now().Format("2006-01-02 15:04:05")
 
@@ -36,6 +40,7 @@ func NewMrs(roundNumberID int, totalGoals, goalCount, competitionID, startTime s
 		GoalCount:     goalCount,
 		CompetitionID: competitionID,
 		StartTime:     startTime,
+		RawScores:     rawScores,
 		Created:       created,
 		Modified:      modified,
 	}, nil

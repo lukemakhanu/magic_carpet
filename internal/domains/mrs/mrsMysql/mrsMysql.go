@@ -38,9 +38,9 @@ func New(connectionString string) (*MysqlRepository, error) {
 func (mr *MysqlRepository) Save(ctx context.Context, t mrs.Mrs) (int, error) {
 	var d int
 	rs, err := mr.db.Exec("INSERT mrs SET round_number_id=?,competition_id=?,start_time=?,total_goals=?, \n"+
-		"goal_count=?,created=now(),modified=now() ON DUPLICATE KEY UPDATE modified=now()",
+		"goal_count=?,raw_scores=?,created=now(),modified=now() ON DUPLICATE KEY UPDATE modified=now()",
 		t.RoundNumberID, t.CompetitionID, t.StartTime, t.TotalGoals,
-		t.GoalCount)
+		t.GoalCount, t.RawScores)
 
 	if err != nil {
 		return d, fmt.Errorf("unable to save mrs : %v", err)

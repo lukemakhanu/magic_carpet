@@ -7,6 +7,7 @@ type Mrs struct {
 	GoalCount     string
 	StartTime     string
 	CompetitionID string
+	RawScores     string
 	Created       string
 	Modified      string
 }
@@ -18,4 +19,5 @@ type TotalGoalCount struct {
 	GoalCount     string `json:"goal_count"`
 	StartTime     string `json:"start_time"`
 	CompetitionID string `json:"competition_id"`
+	RawScores     string `json:"raw_scores"`
 }

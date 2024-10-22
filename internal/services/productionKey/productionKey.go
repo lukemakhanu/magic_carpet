@@ -1790,14 +1790,14 @@ func (s *ProcessKeyService) DecideRatio2(ctx context.Context, oddsSortedSet stri
 
 	if competitionID == "1" || competitionID == "2" || competitionID == "4" {
 
-		if ss != 10 {
-			return list, fmt.Errorf("number of games %s | available %d", "10", ss)
+		if sanitizedList != 10 {
+			return list, fmt.Errorf("number of games %s | available %d", "10", sanitizedList)
 		}
 
 	} else {
 
-		if ss != 9 {
-			return list, fmt.Errorf("number of games %s | available %d", "9", ss)
+		if sanitizedList != 9 {
+			return list, fmt.Errorf("number of games %s | available %d", "9", sanitizedList)
 		}
 
 	}

@@ -75,10 +75,10 @@ func (s *ConsumeMatchResultService) SaveMatchResult(ctx context.Context, ch chan
 			log.Printf("Unable to total count: %v", err)
 		} else {
 
-			log.Printf("RoundNumberID : %d | CompetitionID : %s | StartTime : %s TotalGoals : %s | GoalCount : %s",
-				l.RoundNumberID, l.CompetitionID, l.StartTime, l.TotalGoals, l.GoalCount)
+			log.Printf("RoundNumberID : %d | CompetitionID : %s | StartTime : %s TotalGoals : %s | GoalCount : %s | RawScores : %s",
+				l.RoundNumberID, l.CompetitionID, l.StartTime, l.TotalGoals, l.GoalCount, l.RawScores)
 
-			dd, err := mrs.NewMrs(l.RoundNumberID, l.TotalGoals, l.GoalCount, l.CompetitionID, l.StartTime)
+			dd, err := mrs.NewMrs(l.RoundNumberID, l.TotalGoals, l.GoalCount, l.CompetitionID, l.StartTime, l.RawScores)
 			if err != nil {
 				log.Printf("Err : %v", err)
 			}
