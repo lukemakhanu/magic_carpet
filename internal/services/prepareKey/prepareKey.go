@@ -263,49 +263,84 @@ func (s *PrepareKeyService) SelectKeys(ctx context.Context, oddsSortedSet, sanit
 // SelectKeys : used to select keys to be used later.
 func (s *PrepareKeyService) SelectKeys2(ctx context.Context, oddsSortedSet, sanitizedKeysSet string, matches []string) error {
 
-	// Over Under 2.5 market
 	tgOver25 := fmt.Sprintf("%s_%s", sanitizedKeysSet, "TGO25")
 	tgUnder25 := fmt.Sprintf("%s_%s", sanitizedKeysSet, "TGU25")
 	tgUnder15 := fmt.Sprintf("%s_%s", sanitizedKeysSet, "TGU15")
 
-	log.Printf("tgOver25 %s | tgUnder25 %s", tgOver25, tgUnder25)
+	tg0 := fmt.Sprintf("%s_%s", sanitizedKeysSet, "0")
+	tg1 := fmt.Sprintf("%s_%s", sanitizedKeysSet, "1")
 
-	// check len of over 25 games
-	tgOver25Len, err := s.redisConn.SortedSetLen(ctx, tgOver25)
-	if err != nil {
-		return fmt.Errorf("err : %v failed to get zcard for key %s ", err, tgOver25)
-	}
+	tg2 := fmt.Sprintf("%s_%s", sanitizedKeysSet, "2")
+	// tg2gg := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "2", "gg")
+	// tg2ng := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "2", "ng")
 
-	// check len of under 25 games
-	tgUnder25Len, err := s.redisConn.SortedSetLen(ctx, tgUnder25)
-	if err != nil {
-		return fmt.Errorf("err : %v failed to get zcard for key %s ", err, tgUnder25)
-	}
+	tg3 := fmt.Sprintf("%s_%s", sanitizedKeysSet, "3")
+	// tg3gg := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "3", "gg")
+	// tg3ng := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "3", "ng")
 
-	// total goals under 1.5
-	tgUnder15Len, err := s.redisConn.SortedSetLen(ctx, tgUnder15)
-	if err != nil {
-		return fmt.Errorf("err : %v failed to get zcard for key %s ", err, tgUnder25)
-	}
+	tg4 := fmt.Sprintf("%s_%s", sanitizedKeysSet, "4")
+	// tg4gg := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "4", "gg")
+	// tg4ng := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "4", "ng")
 
-	// Check if sanitized set has enough games for the next day.
+	tg5 := fmt.Sprintf("%s_%s", sanitizedKeysSet, "5")
+	// tg5gg := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "5", "gg")
+	// tg5ng := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "5", "ng")
+
+	tg6 := fmt.Sprintf("%s_%s", sanitizedKeysSet, "6")
+	/* 	tg6gg := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "6", "gg")
+	   	tg6ng := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "6", "ng") */
 
 	sanitizedSetLen, err := s.redisConn.SortedSetLen(ctx, sanitizedKeysSet)
 	if err != nil {
 		return fmt.Errorf("err : %v failed to get zcard for key %s ", err, sanitizedKeysSet)
 	}
 
-	if sanitizedSetLen > 30000 && tgOver25Len > 15000 && tgUnder25Len > 15000 && tgUnder15Len > 4000 {
-		return fmt.Errorf("there are enough games sanitized [%d], sanOv25 [%d], sanUn25 [%d], sanUn15 [%d] in the sanitized list %s skip generating more ",
-			sanitizedSetLen, tgOver25Len, tgUnder25Len, tgUnder15Len, sanitizedKeysSet)
+	tg0Len, err := s.redisConn.SortedSetLen(ctx, tg0)
+	if err != nil {
+		return fmt.Errorf("err : %v failed to get zcard for key %s ", err, tg0)
 	}
 
-	// Check if oddsSortedSet has enough data to be sanitized.
+	tg1Len, err := s.redisConn.SortedSetLen(ctx, tg1)
+	if err != nil {
+		return fmt.Errorf("err : %v failed to get zcard for key %s ", err, tg1)
+	}
 
-	// matches, err := s.slowRedisConn.GetZRange(ctx, oddsSortedSet)
-	// if err != nil {
-	// 	return fmt.Errorf("Err : %v on querying zrange for key : %s", err, oddsSortedSet)
-	// }
+	tg2Len, err := s.redisConn.SortedSetLen(ctx, tg2)
+	if err != nil {
+		return fmt.Errorf("err : %v failed to get zcard for key %s ", err, tg2)
+	}
+
+	tg3Len, err := s.redisConn.SortedSetLen(ctx, tg3)
+	if err != nil {
+		return fmt.Errorf("err : %v failed to get zcard for key %s ", err, tg3)
+	}
+
+	tg4Len, err := s.redisConn.SortedSetLen(ctx, tg4)
+	if err != nil {
+		return fmt.Errorf("err : %v failed to get zcard for key %s ", err, tg4)
+	}
+
+	tg5Len, err := s.redisConn.SortedSetLen(ctx, tg5)
+	if err != nil {
+		return fmt.Errorf("err : %v failed to get zcard for key %s ", err, tg5)
+	}
+
+	tg6Len, err := s.redisConn.SortedSetLen(ctx, tg6)
+	if err != nil {
+		return fmt.Errorf("err : %v failed to get zcard for key %s ", err, tg6)
+	}
+
+	if sanitizedSetLen > 30000 &&
+		tg0Len > 10000 &&
+		tg1Len > 10000 &&
+		tg2Len > 10000 &&
+		tg3Len > 10000 &&
+		tg4Len > 10000 &&
+		tg5Len > 10000 &&
+		tg6Len > 10000 {
+		return fmt.Errorf("there are enough games sanitized [%d] ",
+			sanitizedSetLen)
+	}
 
 	log.Printf("oddsSortedSet len is %d", len(matches))
 
@@ -419,6 +454,8 @@ func (s *PrepareKeyService) SelectKeys2(ctx context.Context, oddsSortedSet, sani
 										if totalGoals == 0 {
 											// Save total 0
 
+											// Can only be ng under (goal goal market)
+
 											s0 := fmt.Sprintf("%s_%s", sanitizedKeysSet, "0")
 											err := s.redisConn.ZAdd(ctx, s0, priority, matchID)
 											if err != nil {
@@ -443,12 +480,53 @@ func (s *PrepareKeyService) SelectKeys2(ctx context.Context, oddsSortedSet, sani
 												log.Printf("Err : %v unable to add %s into %s set ", err, matchID, tgUnder15)
 											}
 
+											// Categorise gg and ng (goal goal // no goal)
+											// total goal 1 cant be categoried, can only be ng
+
+											if hScore == 1 {
+
+												s1h := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "1", "h")
+												err := s.redisConn.ZAdd(ctx, s1h, priority, matchID)
+												if err != nil {
+													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s1h)
+												}
+
+											} else {
+
+												s1a := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "1", "a")
+												err := s.redisConn.ZAdd(ctx, s1a, priority, matchID)
+												if err != nil {
+													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s1a)
+												}
+
+											}
+
 										} else if totalGoals == 2 {
 
 											s2 := fmt.Sprintf("%s_%s", sanitizedKeysSet, "2")
 											err := s.redisConn.ZAdd(ctx, s2, priority, matchID)
 											if err != nil {
 												log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s2)
+											}
+
+											// Categorise goal goal // no goal market
+
+											if hScore > 0 && aScore > 0 {
+
+												s2gg := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "2", "gg")
+												err := s.redisConn.ZAdd(ctx, s2gg, priority, matchID)
+												if err != nil {
+													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s2gg)
+												}
+
+											} else {
+
+												s2ng := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "2", "ng")
+												err := s.redisConn.ZAdd(ctx, s2ng, priority, matchID)
+												if err != nil {
+													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s2ng)
+												}
+
 											}
 
 										} else if totalGoals == 3 {
@@ -459,12 +537,52 @@ func (s *PrepareKeyService) SelectKeys2(ctx context.Context, oddsSortedSet, sani
 												log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s3)
 											}
 
+											// Categorise goal goal // no goal market
+
+											if hScore > 0 && aScore > 0 {
+
+												s3gg := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "3", "gg")
+												err := s.redisConn.ZAdd(ctx, s3gg, priority, matchID)
+												if err != nil {
+													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s3gg)
+												}
+
+											} else {
+
+												s3ng := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "3", "ng")
+												err := s.redisConn.ZAdd(ctx, s3ng, priority, matchID)
+												if err != nil {
+													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s3ng)
+												}
+
+											}
+
 										} else if totalGoals == 4 {
 
 											s4 := fmt.Sprintf("%s_%s", sanitizedKeysSet, "4")
 											err := s.redisConn.ZAdd(ctx, s4, priority, matchID)
 											if err != nil {
 												log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s4)
+											}
+
+											// Categorise goal goal // no goal market
+
+											if hScore > 0 && aScore > 0 {
+
+												s4gg := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "4", "gg")
+												err := s.redisConn.ZAdd(ctx, s4gg, priority, matchID)
+												if err != nil {
+													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s4gg)
+												}
+
+											} else {
+
+												s4ng := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "4", "ng")
+												err := s.redisConn.ZAdd(ctx, s4ng, priority, matchID)
+												if err != nil {
+													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s4ng)
+												}
+
 											}
 
 										} else if totalGoals == 5 {
@@ -475,12 +593,52 @@ func (s *PrepareKeyService) SelectKeys2(ctx context.Context, oddsSortedSet, sani
 												log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s5)
 											}
 
+											// Categorise goal goal // no goal market
+
+											if hScore > 0 && aScore > 0 {
+
+												s5gg := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "5", "gg")
+												err := s.redisConn.ZAdd(ctx, s5gg, priority, matchID)
+												if err != nil {
+													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s5gg)
+												}
+
+											} else {
+
+												s5ng := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "5", "ng")
+												err := s.redisConn.ZAdd(ctx, s5ng, priority, matchID)
+												if err != nil {
+													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s5ng)
+												}
+
+											}
+
 										} else if totalGoals == 6 {
 
 											s6 := fmt.Sprintf("%s_%s", sanitizedKeysSet, "6")
 											err := s.redisConn.ZAdd(ctx, s6, priority, matchID)
 											if err != nil {
 												log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s6)
+											}
+
+											// Categorise goal goal // no goal market
+
+											if hScore > 0 && aScore > 0 {
+
+												s6gg := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "6", "gg")
+												err := s.redisConn.ZAdd(ctx, s6gg, priority, matchID)
+												if err != nil {
+													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s6gg)
+												}
+
+											} else {
+
+												s6ng := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "6", "ng")
+												err := s.redisConn.ZAdd(ctx, s6ng, priority, matchID)
+												if err != nil {
+													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s6ng)
+												}
+
 											}
 
 										} else {
