@@ -1363,7 +1363,7 @@ func (s *ProcessKeyService) Validate4(ctx context.Context, leagueID, oddsSortedS
 	// Get the games ration for over TG25
 
 	keysList := []oddsFiles.CheckKeys{}
-	data, err := s.DecideRatio2(ctx, oddsSortedSet, oddsu15Set, fetched, distr, competitionID)
+	data, err := s.DecideRatio4(ctx, oddsSortedSet, oddsu15Set, fetched, distr, competitionID)
 	if err != nil {
 		return m, fmt.Errorf("err : %v failed to read from %s z range", err, oddsSortedSet)
 	}
@@ -1720,7 +1720,8 @@ func (s *ProcessKeyService) DecideRatio2(ctx context.Context, oddsSortedSet stri
 					GoalCount:     goalCount,
 					StartTime:     r.StartTime,
 					CompetitionID: r.CompetitionID,
-					Created:       r.CompetitionID,
+					RawScores:     r.RawScores,
+					Created:       r.Created,
 					Modified:      r.Modified,
 				}
 
@@ -1759,7 +1760,8 @@ func (s *ProcessKeyService) DecideRatio2(ctx context.Context, oddsSortedSet stri
 					GoalCount:     goalCount,
 					StartTime:     r.StartTime,
 					CompetitionID: r.CompetitionID,
-					Created:       r.CompetitionID,
+					RawScores:     r.RawScores,
+					Created:       r.Created,
 					Modified:      r.Modified,
 				}
 
@@ -1840,6 +1842,349 @@ func (s *ProcessKeyService) DecideRatio2(ctx context.Context, oddsSortedSet stri
 
 	return list, nil
 
+}
+
+func (s *ProcessKeyService) DecideRatio4(ctx context.Context, oddsSortedSet string, oddsu15Set string, totalGames int, distr []mrs.Mrs, competitionID string) ([]string, error) {
+	list := []string{}
+
+	// Check if the number of games are correct
+
+	ss := 0
+	for _, d := range distr {
+
+		matchCount, err := strconv.Atoi(d.GoalCount)
+		if err != nil {
+			return list, fmt.Errorf("err : %v failed to convert matchCount", err)
+		}
+		ss += matchCount
+
+	}
+
+	log.Printf("ss returned %d", ss)
+
+	// Sanitize the list before proceeding.
+
+	sanitizedGoals := []mrs.Mrs{}
+
+	if competitionID == "1" || competitionID == "2" || competitionID == "4" {
+
+		if ss != 10 {
+
+			divider := ss / 10
+
+			for _, r := range distr {
+
+				matchCount, err := strconv.Atoi(r.GoalCount)
+				if err != nil {
+					return list, fmt.Errorf("err : %v failed to convert matchCount", err)
+				}
+
+				accurateCount := matchCount / divider
+				log.Printf("final Goal count %d", accurateCount)
+
+				goalCount := fmt.Sprintf("%d", accurateCount)
+
+				dd := mrs.Mrs{
+					MrID:          r.MrID,
+					RoundNumberID: r.RoundNumberID,
+					TotalGoals:    r.TotalGoals,
+					GoalCount:     goalCount,
+					StartTime:     r.StartTime,
+					CompetitionID: r.CompetitionID,
+					RawScores:     r.RawScores,
+					Created:       r.Created,
+					Modified:      r.Modified,
+				}
+
+				sanitizedGoals = append(sanitizedGoals, dd)
+			}
+
+		} else {
+
+			for _, r := range distr {
+				sanitizedGoals = append(sanitizedGoals, r)
+			}
+		}
+
+	} else {
+
+		if ss != 9 {
+
+			divider := ss / 9
+
+			for _, r := range distr {
+
+				matchCount, err := strconv.Atoi(r.GoalCount)
+				if err != nil {
+					return list, fmt.Errorf("err : %v failed to convert matchCount", err)
+				}
+
+				accurateCount := matchCount / divider
+				log.Printf("final Goal count %d", accurateCount)
+
+				goalCount := fmt.Sprintf("%d", accurateCount)
+
+				dd := mrs.Mrs{
+					MrID:          r.MrID,
+					RoundNumberID: r.RoundNumberID,
+					TotalGoals:    r.TotalGoals,
+					GoalCount:     goalCount,
+					StartTime:     r.StartTime,
+					CompetitionID: r.CompetitionID,
+					RawScores:     r.RawScores,
+					Created:       r.Created,
+					Modified:      r.Modified,
+				}
+
+				sanitizedGoals = append(sanitizedGoals, dd)
+			}
+
+		} else {
+
+			for _, r := range distr {
+				sanitizedGoals = append(sanitizedGoals, r)
+			}
+
+		}
+	}
+
+	sanitizedList := 0
+	for _, d := range sanitizedGoals {
+
+		matchCount, err := strconv.Atoi(d.GoalCount)
+		if err != nil {
+			return list, fmt.Errorf("err : %v failed to convert matchCount", err)
+		}
+		sanitizedList += matchCount
+
+	}
+
+	log.Printf("sanitizedList returned %d", sanitizedList)
+
+	if competitionID == "1" || competitionID == "2" || competitionID == "4" {
+
+		if sanitizedList != 10 {
+			return list, fmt.Errorf("number of games %s | available %d", "10", sanitizedList)
+		}
+
+	} else {
+
+		if sanitizedList != 9 {
+			return list, fmt.Errorf("number of games %s | available %d", "9", sanitizedList)
+		}
+
+	}
+
+	log.Printf("*** I get here ***")
+	log.Println("*** data returned after cleanup ***", sanitizedGoals)
+
+	// Query the games from Redis now
+	for _, d := range sanitizedGoals {
+
+		scores := strings.Split(d.RawScores, "**")
+		// raw_scores: 52824375#1#2**52824376#1#1**52824377#2#1**52824378#2#2**52824379#1#0**52824380#0#1**52824381#2#0**52824382#1#1**52824383#3#1**52824384#1#1
+
+		for _, cc := range scores {
+
+			// Example 52824375#1#2
+
+			goals := strings.Split(cc, "#")
+			if len(goals) == 3 {
+
+				hSc := goals[1]
+				aSc := goals[2]
+
+				log.Printf("**** HomeScore %s | Away Score %s ****", hSc, aSc)
+
+				homeGoals, err := strconv.Atoi(hSc)
+				if err != nil {
+					return list, fmt.Errorf("err : %v failed to convert hsc to int", err)
+				}
+
+				awayGoals, err := strconv.Atoi(aSc)
+				if err != nil {
+					return list, fmt.Errorf("err : %v failed to convert asc to int", err)
+				}
+
+				totalGoals := homeGoals + awayGoals
+
+				if totalGoals == 0 {
+
+					sel0 := fmt.Sprintf("%s_%d", oddsSortedSet, 0)
+					data, err := s.redisConn.GetZRangeWithLimit(ctx, sel0, 1)
+					if err != nil {
+						return list, fmt.Errorf("err : %v failed to read from %s z range", err, sel0)
+					}
+
+					log.Println("*** data returned sel0 *** ", data)
+					for _, xx := range data {
+						list = append(list, xx)
+						s.RemoveUsedKeys(ctx, sel0, xx)
+					}
+
+					// Delete this record so we dont reuse it.
+
+				} else if totalGoals == 1 {
+
+					if homeGoals == 1 {
+
+						sel1h := fmt.Sprintf("%s_%s_%s", oddsSortedSet, "1", "h")
+						data, err := s.redisConn.GetZRangeWithLimit(ctx, sel1h, 1)
+						if err != nil {
+							return list, fmt.Errorf("err : %v failed to read from %s z range", err, sel1h)
+						}
+
+						log.Println("*** data returned sel1h *** ", data)
+						for _, xx := range data {
+							list = append(list, xx)
+							s.RemoveUsedKeys(ctx, sel1h, xx)
+						}
+
+					} else {
+
+						sel1a := fmt.Sprintf("%s_%s_%s", oddsSortedSet, "1", "a")
+						data, err := s.redisConn.GetZRangeWithLimit(ctx, sel1a, 1)
+						if err != nil {
+							return list, fmt.Errorf("err : %v failed to read from %s z range", err, sel1a)
+						}
+
+						log.Println("*** data returned sel1a *** ", data)
+						for _, xx := range data {
+							list = append(list, xx)
+							s.RemoveUsedKeys(ctx, sel1a, xx)
+
+						}
+
+					}
+
+				} else {
+
+					if homeGoals > 0 && awayGoals > 0 {
+
+						// Query from Goal Goal batch
+
+						if homeGoals > awayGoals {
+
+							selggh := fmt.Sprintf("%s_%d_%s_%s", oddsSortedSet, totalGoals, "gg", "h")
+							data, err := s.redisConn.GetZRangeWithLimit(ctx, selggh, 1)
+							if err != nil {
+								return list, fmt.Errorf("err : %v failed to read from %s z range", err, selggh)
+							}
+
+							log.Println("*** data returned selggh *** ", data)
+							for _, xx := range data {
+								list = append(list, xx)
+								s.RemoveUsedKeys(ctx, selggh, xx)
+							}
+
+						} else if awayGoals > homeGoals {
+
+							selgga := fmt.Sprintf("%s_%d_%s_%s", oddsSortedSet, totalGoals, "gg", "a")
+							data, err := s.redisConn.GetZRangeWithLimit(ctx, selgga, 1)
+							if err != nil {
+								return list, fmt.Errorf("err : %v failed to read from %s z range", err, selgga)
+							}
+
+							log.Println("*** data returned *** ", data)
+							for _, xx := range data {
+								list = append(list, xx)
+								s.RemoveUsedKeys(ctx, selgga, xx)
+							}
+
+						} else {
+
+							selggd := fmt.Sprintf("%s_%d_%s_%s", oddsSortedSet, totalGoals, "gg", "d")
+							data, err := s.redisConn.GetZRangeWithLimit(ctx, selggd, 1)
+							if err != nil {
+								return list, fmt.Errorf("err : %v failed to read from %s z range", err, selggd)
+							}
+
+							log.Println("*** data returned *** ", data)
+							for _, xx := range data {
+								list = append(list, xx)
+								s.RemoveUsedKeys(ctx, selggd, xx)
+							}
+
+						}
+
+					} else {
+
+						// Query from No goal
+
+						if homeGoals > awayGoals {
+
+							selngh := fmt.Sprintf("%s_%d_%s_%s", oddsSortedSet, totalGoals, "ng", "h")
+							data, err := s.redisConn.GetZRangeWithLimit(ctx, selngh, 1)
+							if err != nil {
+								return list, fmt.Errorf("err : %v failed to read from %s z range", err, selngh)
+							}
+
+							log.Println("*** data returned selngh *** ", data)
+							for _, xx := range data {
+								list = append(list, xx)
+								s.RemoveUsedKeys(ctx, selngh, xx)
+							}
+
+						} else if awayGoals > homeGoals {
+
+							selnga := fmt.Sprintf("%s_%d_%s_%s", oddsSortedSet, totalGoals, "ng", "a")
+							data, err := s.redisConn.GetZRangeWithLimit(ctx, selnga, 1)
+							if err != nil {
+								return list, fmt.Errorf("err : %v failed to read from %s z range", err, selnga)
+							}
+
+							log.Println("*** data returned selnga *** ", data)
+							for _, xx := range data {
+								list = append(list, xx)
+								s.RemoveUsedKeys(ctx, selnga, xx)
+							}
+
+						} else {
+
+							selngd := fmt.Sprintf("%s_%d_%s_%s", oddsSortedSet, totalGoals, "ng", "d")
+							data, err := s.redisConn.GetZRangeWithLimit(ctx, selngd, 1)
+							if err != nil {
+								return list, fmt.Errorf("err : %v failed to read from %s z range", err, selngd)
+							}
+
+							log.Println("*** data returned *** ", data)
+							for _, xx := range data {
+								list = append(list, xx)
+								s.RemoveUsedKeys(ctx, selngd, xx)
+							}
+
+						}
+					}
+				}
+
+			} else {
+				log.Printf("Wrong format %s", cc)
+			}
+
+		}
+
+	}
+
+	//
+	log.Println("List before shuffle : ", list)
+	for i := len(list) - 1; i > 0; i-- { // Fisher–Yates shuffle
+		j := rand.IntN(i + 1)
+		list[i], list[j] = list[j], list[i]
+	}
+
+	log.Println("List after shuffle : ", list)
+
+	return list, nil
+
+}
+
+func (s *ProcessKeyService) RemoveUsedKeys(ctx context.Context, key, value string) {
+	_, err := s.redisConn.ZRem(ctx, key, value)
+	if err != nil {
+		log.Printf("Err : %v", err)
+	} else {
+		log.Printf("deleted key %s from zset %s", key, value)
+	}
 }
 
 func (s *ProcessKeyService) DecideRatio3(ctx context.Context, oddsSortedSet string, oddsu15Set string, totalGames int) ([]string, error) {

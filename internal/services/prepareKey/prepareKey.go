@@ -678,6 +678,9 @@ func (s *PrepareKeyService) SelectKeys2(ctx context.Context, oddsSortedSet, sani
 
 											} else {
 
+												
+												
+												
 												s6ng := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "6", "ng")
 												err := s.redisConn.ZAdd(ctx, s6ng, priority, matchID)
 												if err != nil {
