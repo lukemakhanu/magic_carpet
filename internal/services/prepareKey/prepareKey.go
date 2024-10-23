@@ -519,10 +519,20 @@ func (s *PrepareKeyService) SelectKeys2(ctx context.Context, oddsSortedSet, sani
 													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s2gg)
 												}
 
+												err = s.Save1X2(ctx, s2gg, priority, matchID, hScore, aScore)
+												if err != nil {
+													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s2gg)
+												}
+
 											} else {
 
 												s2ng := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "2", "ng")
 												err := s.redisConn.ZAdd(ctx, s2ng, priority, matchID)
+												if err != nil {
+													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s2ng)
+												}
+
+												err = s.Save1X2(ctx, s2ng, priority, matchID, hScore, aScore)
 												if err != nil {
 													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s2ng)
 												}
@@ -547,10 +557,20 @@ func (s *PrepareKeyService) SelectKeys2(ctx context.Context, oddsSortedSet, sani
 													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s3gg)
 												}
 
+												err = s.Save1X2(ctx, s3gg, priority, matchID, hScore, aScore)
+												if err != nil {
+													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s3gg)
+												}
+
 											} else {
 
 												s3ng := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "3", "ng")
 												err := s.redisConn.ZAdd(ctx, s3ng, priority, matchID)
+												if err != nil {
+													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s3ng)
+												}
+
+												err = s.Save1X2(ctx, s3ng, priority, matchID, hScore, aScore)
 												if err != nil {
 													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s3ng)
 												}
@@ -575,10 +595,20 @@ func (s *PrepareKeyService) SelectKeys2(ctx context.Context, oddsSortedSet, sani
 													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s4gg)
 												}
 
+												err = s.Save1X2(ctx, s4gg, priority, matchID, hScore, aScore)
+												if err != nil {
+													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s4gg)
+												}
+
 											} else {
 
 												s4ng := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "4", "ng")
 												err := s.redisConn.ZAdd(ctx, s4ng, priority, matchID)
+												if err != nil {
+													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s4ng)
+												}
+
+												err = s.Save1X2(ctx, s4ng, priority, matchID, hScore, aScore)
 												if err != nil {
 													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s4ng)
 												}
@@ -603,10 +633,20 @@ func (s *PrepareKeyService) SelectKeys2(ctx context.Context, oddsSortedSet, sani
 													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s5gg)
 												}
 
+												err = s.Save1X2(ctx, s5gg, priority, matchID, hScore, aScore)
+												if err != nil {
+													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s5gg)
+												}
+
 											} else {
 
 												s5ng := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "5", "ng")
 												err := s.redisConn.ZAdd(ctx, s5ng, priority, matchID)
+												if err != nil {
+													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s5ng)
+												}
+
+												err = s.Save1X2(ctx, s5ng, priority, matchID, hScore, aScore)
 												if err != nil {
 													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s5ng)
 												}
@@ -631,10 +671,20 @@ func (s *PrepareKeyService) SelectKeys2(ctx context.Context, oddsSortedSet, sani
 													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s6gg)
 												}
 
+												err = s.Save1X2(ctx, s6gg, priority, matchID, hScore, aScore)
+												if err != nil {
+													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s6gg)
+												}
+
 											} else {
 
 												s6ng := fmt.Sprintf("%s_%s_%s", sanitizedKeysSet, "6", "ng")
 												err := s.redisConn.ZAdd(ctx, s6ng, priority, matchID)
+												if err != nil {
+													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s6ng)
+												}
+
+												err = s.Save1X2(ctx, s6ng, priority, matchID, hScore, aScore)
 												if err != nil {
 													log.Printf("Err : %v unable to add %s into %s set ", err, matchID, s6ng)
 												}
@@ -692,6 +742,40 @@ func (s *PrepareKeyService) SelectKeys2(ctx context.Context, oddsSortedSet, sani
 
 		} else {
 			log.Printf("Match saved with wrong format : %s", parentID)
+		}
+
+	}
+
+	return nil
+}
+
+// Save1X2 :
+func (s *PrepareKeyService) Save1X2(ctx context.Context, baseKey, priority, matchID string, homeScore, awayScore int) error {
+
+	if homeScore > awayScore {
+
+		hm := fmt.Sprintf("%s_%s", baseKey, "h")
+		err := s.redisConn.ZAdd(ctx, hm, priority, matchID)
+		if err != nil {
+			return fmt.Errorf("err : %v unable to add %s into %s set ", err, matchID, hm)
+		}
+
+	} else if awayScore > homeScore {
+
+		hm := fmt.Sprintf("%s_%s", baseKey, "a")
+		err := s.redisConn.ZAdd(ctx, hm, priority, matchID)
+		if err != nil {
+			return fmt.Errorf("err : %v unable to add %s into %s set ", err, matchID, hm)
+		}
+
+	} else {
+
+		// Draw
+
+		hm := fmt.Sprintf("%s_%s", baseKey, "d")
+		err := s.redisConn.ZAdd(ctx, hm, priority, matchID)
+		if err != nil {
+			return fmt.Errorf("err : %v unable to add %s into %s set ", err, matchID, hm)
 		}
 
 	}
