@@ -99,7 +99,7 @@ func (s *SaveFileService) SaveFiles(ctx context.Context, fileDir, country string
 
 	allFiles, err := s.dirReader.AllFiles(ctx)
 	if err != nil {
-		return fmt.Errorf("Err : %v failed to read files", err)
+		return fmt.Errorf("err : %v failed to read files", err)
 	}
 
 	for _, f := range allFiles {
@@ -108,12 +108,12 @@ func (s *SaveFileService) SaveFiles(ctx context.Context, fileDir, country string
 
 		odds, err := oddsFiles.NewOddsFile(f.LsFileName, fileDir, country, f.ExtID, f.CompetitionID, f.ProjectID)
 		if err != nil {
-			return fmt.Errorf("Err : %v failed to instantiate files", err)
+			return fmt.Errorf("err : %v failed to instantiate files", err)
 		}
 
 		lastID, err := s.oddsFileMysql.SaveOdd(ctx, *odds)
 		if err != nil {
-			return fmt.Errorf("Err : %v failed to save files", err)
+			return fmt.Errorf("err : %v failed to save files", err)
 		}
 
 		log.Printf("Last inserted ID  %d", lastID)
@@ -128,7 +128,7 @@ func (s *SaveFileService) SaveLiveScoreFiles(ctx context.Context, fileDir, count
 
 	allFiles, err := s.dirReader.ReadLiveScoreDirectory(ctx)
 	if err != nil {
-		return fmt.Errorf("Err : %v failed to read files", err)
+		return fmt.Errorf("err : %v failed to read files", err)
 	}
 
 	for _, f := range allFiles {
@@ -137,12 +137,12 @@ func (s *SaveFileService) SaveLiveScoreFiles(ctx context.Context, fileDir, count
 
 		ls, err := liveScoreFiles.NewLiveScoreFile(f.LsFileName, fileDir, country, f.ExtID, f.ProjectID, f.CompetitionID)
 		if err != nil {
-			return fmt.Errorf("Err : %v failed to instantiate live score files", err)
+			return fmt.Errorf("err : %v failed to instantiate live score files", err)
 		}
 
 		lastID, err := s.liveScoreFilesMysql.Save(ctx, *ls)
 		if err != nil {
-			return fmt.Errorf("Err : %v failed to save live score files", err)
+			return fmt.Errorf("err : %v failed to save live score files", err)
 		}
 
 		log.Printf("Last inserted ID : %d", lastID)
@@ -157,21 +157,21 @@ func (s *SaveFileService) SaveWinningOutcomesFiles(ctx context.Context, fileDir,
 
 	allFiles, err := s.dirReader.ReadWinningOutcomeDirectory(ctx)
 	if err != nil {
-		return fmt.Errorf("Err : %v failed to read files", err)
+		return fmt.Errorf("err : %v failed to read files", err)
 	}
 
 	for _, f := range allFiles {
 
 		// Save this files into our databases
-
-		wo, err := woFiles.NewWoFile(f.LsFileName, fileDir, country, f.ExtID, f.ProjectID, f.CompetitionID)
+		status := "pending"
+		wo, err := woFiles.NewWoFile(f.LsFileName, fileDir, country, f.ExtID, f.ProjectID, f.CompetitionID, status)
 		if err != nil {
-			return fmt.Errorf("Err : %v failed to instantiate wo files", err)
+			return fmt.Errorf("err : %v failed to instantiate wo files", err)
 		}
 
 		lastID, err := s.woFilesMysql.SaveWo(ctx, *wo)
 		if err != nil {
-			return fmt.Errorf("Err : %v failed to save wo files", err)
+			return fmt.Errorf("err : %v failed to save wo files", err)
 		}
 
 		log.Printf("Last inserted ID : %d", lastID)

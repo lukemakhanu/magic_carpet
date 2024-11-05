@@ -2183,7 +2183,7 @@ func (s *ProcessKeyService) RemoveUsedKeys(ctx context.Context, key, value strin
 	if err != nil {
 		log.Printf("Err : %v", err)
 	} else {
-		log.Printf("deleted key %s from zset %s", key, value)
+		log.Printf("###### deleted key %s from zset %s ######", key, value)
 	}
 }
 

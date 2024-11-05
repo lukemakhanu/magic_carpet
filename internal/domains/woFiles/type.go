@@ -21,6 +21,7 @@ type WoFiles struct {
 	WoExtID       string
 	ProjectID     string
 	CompetitionID string
+	Status        string
 	Created       string
 	Modified      string
 }

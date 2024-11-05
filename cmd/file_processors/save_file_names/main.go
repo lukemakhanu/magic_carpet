@@ -54,7 +54,7 @@ func main() {
 
 	ctx := context.Background()
 
-	log.Printf("******* About to start APP ***")
+	log.Printf("** About to start APP ***")
 
 	// 1. Kenya
 

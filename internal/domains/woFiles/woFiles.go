@@ -6,7 +6,7 @@ import (
 )
 
 // NewWoFile instantiate
-func NewWoFile(woFileName, woDir, country, woExtID, projectID, competitionID string) (*WoFiles, error) {
+func NewWoFile(woFileName, woDir, country, woExtID, projectID, competitionID, status string) (*WoFiles, error) {
 
 	if woFileName == "" {
 		return &WoFiles{}, fmt.Errorf("woFileName not set")
@@ -32,6 +32,10 @@ func NewWoFile(woFileName, woDir, country, woExtID, projectID, competitionID str
 		return &WoFiles{}, fmt.Errorf("competitionID alias not set")
 	}
 
+	if status == "" {
+		return &WoFiles{}, fmt.Errorf("status not set")
+	}
+
 	created := time.Now().Format("2006-01-02 15:04:05")
 	modified := time.Now().Format("2006-01-02 15:04:05")
 
@@ -42,6 +46,7 @@ func NewWoFile(woFileName, woDir, country, woExtID, projectID, competitionID str
 		ProjectID:     projectID,
 		CompetitionID: competitionID,
 		Country:       country,
+		Status:        status,
 		Created:       created,
 		Modified:      modified,
 	}, nil
