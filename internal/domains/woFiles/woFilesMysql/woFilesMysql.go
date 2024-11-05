@@ -220,7 +220,7 @@ func (r *MysqlRepository) GetWO(ctx context.Context, statement string) ([]woFile
 // GetPendingWo : used to return pending winning outcomes that havent been processed
 func (r *MysqlRepository) GetPendingWo(ctx context.Context, status string) ([]woFiles.WoFiles, error) {
 	var gc []woFiles.WoFiles
-	statement := fmt.Sprintf("select wo_file_id,wo_file_name,wo_dir,country,wo_ext_id,project_id,competition_id,status,created,modified from winning_outcome_files where status='%s'  limit 50",
+	statement := fmt.Sprintf("select wo_file_id,wo_file_name,wo_dir,country,ext_id,project_id,competition_id,status,created,modified from winning_outcome_files where status='%s'  limit 50",
 		status)
 
 	raws, err := r.db.Query(statement)
