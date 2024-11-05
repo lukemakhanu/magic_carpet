@@ -216,3 +216,42 @@ func (r *MysqlRepository) GetWO(ctx context.Context, statement string) ([]woFile
 
 	return gc, nil
 }
+
+// GetPendingWo : used to return pending winning outcomes that havent been processed
+func (r *MysqlRepository) GetPendingWo(ctx context.Context, status string) ([]woFiles.WoFiles, error) {
+	var gc []woFiles.WoFiles
+	statement := fmt.Sprintf("select wo_file_id,wo_file_name,wo_dir,country,wo_ext_id,project_id,competition_id,status,created,modified from winning_outcome_files where status='%s'  limit 50",
+		status)
+
+	raws, err := r.db.Query(statement)
+	if err != nil {
+		return nil, err
+	}
+
+	for raws.Next() {
+		var g woFiles.WoFiles
+		err := raws.Scan(&g.WoFileID, &g.WoFileName, &g.WoDir, &g.Country, &g.WoExtID, &g.ProjectID, &g.CompetitionID, &g.Status, &g.Created, &g.Modified)
+		if err != nil {
+			return nil, err
+		}
+		gc = append(gc, g)
+	}
+
+	if err = raws.Err(); err != nil {
+		return nil, err
+	}
+	raws.Close()
+
+	return gc, nil
+}
+
+// UpdateWoStatus :
+func (mr *MysqlRepository) UpdateWoStatus(ctx context.Context, status, woFileID string) (int64, error) {
+	var rs int64
+	result, err := mr.db.Exec("update winning_outcome_files set status=?,modified=now() where wo_file_id = ? ",
+		status, woFileID)
+	if err != nil {
+		return rs, err
+	}
+	return result.RowsAffected()
+}

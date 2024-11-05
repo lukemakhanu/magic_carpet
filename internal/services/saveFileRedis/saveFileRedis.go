@@ -190,19 +190,19 @@ func (s *FileProcessorService) ReturnZRangeData(ctx context.Context, zSetKey str
 }
 
 // ReturnRawWO : returns all winning outcomes
-func (s *FileProcessorService) ReturnRawWO(ctx context.Context, rawWoList, countryWoStagingSet, fullDirPath string, matchChan chan Job) error {
+func (s *FileProcessorService) ReturnRawWO(ctx context.Context, countryWoStagingSet, fullDirPath string, matchChan chan Job) error {
 
 	jsonFile, err := os.Open(fullDirPath)
 	defer jsonFile.Close()
 	if err != nil {
-		return fmt.Errorf("Failed to open file %s | err : %v", fullDirPath, err)
+		return fmt.Errorf("failed to open file %s | err : %v", fullDirPath, err)
 	}
 
 	log.Printf("Successfully opened : %s", fullDirPath)
 
 	byteValue, err := io.ReadAll(jsonFile)
 	if err != nil {
-		return fmt.Errorf("Failed to readAll %s | err : %v", fullDirPath, err)
+		return fmt.Errorf("failed to readAll %s | err : %v", fullDirPath, err)
 	}
 
 	// fullDirPath ==> /tz/generator/winning_outcomes/wo_31236351_3_18.txt
@@ -307,13 +307,6 @@ func (s *FileProcessorService) ReturnRawWO(ctx context.Context, rawWoList, count
 
 		}
 
-	}
-
-	// Push it to list of failed
-	failedPath := fmt.Sprintf("%s_%s", rawWoList, "FAILED")
-	err = s.redisConn.ZAdd(ctx, failedPath, "1", fullDirPath)
-	if err != nil {
-		log.Printf("Err: %v | failed to save %s into z range list %s", err, fullDirPath, rawWoList)
 	}
 
 	return fmt.Errorf("data saved in wrong format :%s ", fullDirPath)
@@ -459,4 +452,20 @@ func (s *FileProcessorService) AddToList(ctx context.Context, list, item string)
 	}
 
 	return nil
+}
+
+func (s *FileProcessorService) SelectedWo(ctx context.Context, status string) ([]woFiles.WoFiles, error) {
+	wo, err := s.woFilesMysql.GetPendingWo(ctx, status)
+	if err != nil {
+		return nil, fmt.Errorf("err %v | failed to return raw winning outcomes", err)
+	}
+	return wo, nil
+}
+
+func (s *FileProcessorService) UpdateWoStatus(ctx context.Context, status, woFileID string) (int64, error) {
+	wID, err := s.woFilesMysql.UpdateWoStatus(ctx, status, woFileID)
+	if err != nil {
+		return 0, fmt.Errorf("err %v | failed to return raw winning outcomes", err)
+	}
+	return wID, nil
 }

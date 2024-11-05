@@ -27,7 +27,7 @@ var inProgress bool
 func main() {
 	InitConfig()
 
-	rawWinningOutcomeSortedSet := viper.GetString("redis-sorted-set.rawWinningOutcome")
+	//rawWinningOutcomeSortedSet := viper.GetString("redis-sorted-set.rawWinningOutcome")
 	woSortedSet := viper.GetString("redis-sorted-set.winningOutcome")
 	liveScoreSortedSet := viper.GetString("redis-sorted-set.liveScore")
 	oddsSortedSet := viper.GetString("redis-sorted-set.odds")
@@ -58,9 +58,9 @@ func main() {
 			case t := <-ticker.C:
 				if !inProgress {
 					inProgress = true
-					SaveWinningOutcomes(ctx, matchChan, pg, rawWinningOutcomeSortedSet)
+					SaveWinningOutcomes(ctx, matchChan, pg)
 				} else {
-					log.Printf("SaveWinningOutcomes in process.. %v.\n", t)
+					log.Printf("in process.. %v.\n", t)
 				}
 			}
 		}
@@ -74,7 +74,7 @@ func main() {
 
 				if v.JobType == "query_match_id" {
 
-					err := pg.ReturnRawWO(ctx, rawWinningOutcomeSortedSet, woSortedSet, v.WorkStr, matchChan)
+					err := pg.ReturnRawWO(ctx, woSortedSet, v.WorkStr, matchChan)
 					if err != nil {
 						log.Printf("Err : failed to save parent match ids : %v", err)
 					}
@@ -117,32 +117,26 @@ func main() {
 	fmt.Println("caught signal and exiting:::", s)
 }
 
-// SaveWinningOutcomes : used to save winning outcomes
-func SaveWinningOutcomes(ctx context.Context, matchChan chan saveFileRedis.Job, sm *saveFileRedis.FileProcessorService, rawWinningOutcomeSortedSet string) {
+func SaveWinningOutcomes(ctx context.Context, matchChan chan saveFileRedis.Job, sm *saveFileRedis.FileProcessorService) {
 
 	defer func() {
 		inProgress = false
-		log.Printf("Done calling SaveWinningOutcomes ..")
+		log.Printf("Done calling  ....")
 	}()
 
-	fetched := 50
-
-	data, err := sm.ReturnZRangeData(ctx, rawWinningOutcomeSortedSet, fetched)
+	status := "pending"
+	data, err := sm.SelectedWo(ctx, status)
 	if err != nil {
-		log.Printf("Err : failed to return saved winning outcome : %v", err)
+		log.Printf("Err : %v", err)
 	}
 
-	log.Printf("Available winning outcomes to save :: %d", len(data))
+	for _, wo := range data {
 
-	// Process this batch of round number ID
-	for _, fullPath := range data {
+		fullPath := fmt.Sprintf("%s/%s", wo.WoDir, wo.WoFileName)
 
-		// fullPath example : /tz/generator/winning_outcomes/wo_31236351_3_18.txt
-
-		err := sm.RemoveFromList(ctx, rawWinningOutcomeSortedSet, fullPath)
-		if err != nil {
-			log.Printf("Err : %v failed to remove from list ...", err)
-		}
+		// Update this as processed.
+		processedStatus := "processed"
+		sm.UpdateWoStatus(ctx, processedStatus, wo.WoFileID)
 
 		fj := saveFileRedis.Job{
 			JobType:  "query_match_id",

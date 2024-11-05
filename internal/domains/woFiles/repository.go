@@ -13,4 +13,6 @@ type WoFilesRepository interface {
 	GetWinningOutcomeFiles(ctx context.Context) ([]WinningOutcomeFiles, error)
 
 	GetWO(ctx context.Context, statement string) ([]WinningOutcomeFiles, error)
+	GetPendingWo(ctx context.Context, status string) ([]WoFiles, error)
+	UpdateWoStatus(ctx context.Context, status, woFileID string) (int64, error)
 }
