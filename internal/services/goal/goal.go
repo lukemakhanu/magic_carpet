@@ -189,10 +189,10 @@ func (s *GoalService) SelectKeys(ctx context.Context, oddsSortedSet, sanitizedKe
 		return fmt.Errorf("err : %v failed to get zcard for key %s ", err, tg6)
 	}
 
-	if tg0Len > 50000 &&
-		tg1Len > 40000 &&
-		tg2Len > 30000 &&
-		tg3Len > 30000 &&
+	if tg0Len > 100000 &&
+		tg1Len > 100000 &&
+		tg2Len > 100000 &&
+		tg3Len > 50000 &&
 		tg4Len > 30000 &&
 		tg5Len > 20000 &&
 		tg6Len > 20000 {
