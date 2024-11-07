@@ -27,8 +27,8 @@ func main() {
 	InitConfig()
 
 	oddsSortedSet := viper.GetString("redis-sorted-set.odds")
-	oddsu15Set := viper.GetString("redis-sorted-set.oddsu15")
-	log.Printf("oddsu15Set :: %s", oddsu15Set)
+	sanitizedKeysSet := viper.GetString("redis-sorted-set.sanitizedKeysSet")
+	minimumRequired := viper.GetInt("redis-sorted-set.minimumRequired")
 
 	pg, err := productionKey.NewProcessKeyService(
 		productionKey.WithMysqlMatchesRepository(viper.GetString("mySQL.live")),
@@ -55,10 +55,10 @@ func main() {
 				if !inProgress {
 					inProgress = true
 
-					SaveFinalOddsKey(ctx, pg, oddsSortedSet, oddsu15Set)
+					SaveFinalOddsKey(ctx, pg, oddsSortedSet, sanitizedKeysSet, minimumRequired)
 
 				} else {
-					log.Printf("**** SaveFinalOddsKey in process **** %v.\n", t)
+					log.Printf("**** SaveFinalOddsKey2 in process **** %v.\n", t)
 				}
 			}
 		}
@@ -73,15 +73,17 @@ func main() {
 	fmt.Println("caught signal and exiting", s)
 }
 
-// SaveFinalOddsKey : used to save final odds
-func SaveFinalOddsKey(ctx context.Context, sm *productionKey.ProcessKeyService, oddsSortedSet, oddsu15Set string) {
+// SaveFinalOddsKey2 : used to save final odds
+func SaveFinalOddsKey(ctx context.Context, sm *productionKey.ProcessKeyService, oddsSortedSet, sanitizedKeysSet string, minimumRequired int) {
 
 	defer func() {
 		inProgress = false
-		log.Printf("******* Done calling SaveFinalOddsKey ****** ")
+		log.Printf("******* Done calling SaveFinalOddsKey2 ****** ")
 	}()
 
-	err := sm.GetUpcomingSeasonWeeks3(ctx, oddsSortedSet, oddsu15Set)
+	// get a list of match categories
+
+	err := sm.GetUpcomingSeasonWeeks(ctx, oddsSortedSet, sanitizedKeysSet, minimumRequired)
 	if err != nil {
 		log.Printf("Err : %v failed to save production odds >> ", err)
 	}

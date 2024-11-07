@@ -11,7 +11,9 @@
     },
     "redis-sorted-set": {
         "odds": "SANITIZED_ODDS",
-        "oddsu15": "SANITIZED_ODDS_TGU15"
+        "oddsu15": "SANITIZED_ODDS_TGU15",
+        "sanitizedKeysSet": "SANITIZED_ODDS",
+        "minimumRequired": "3000"
     },
     "log_setting": {
         "MaxSize": "100",
