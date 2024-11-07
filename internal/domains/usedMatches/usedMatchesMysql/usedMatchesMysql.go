@@ -78,7 +78,7 @@ func (r *MysqlRepository) GetAvailable(ctx context.Context, category string) ([]
 
 	for raws.Next() {
 		var g goals.Goals
-		err := raws.Scan(&g.GoalID, &g.Country, &g.ProjectID, &g.MatchID, &g.Category)
+		err := raws.Scan(&g.GoalID, &g.Country, &g.ProjectID, &g.MatchID, &g.Category, &g.Created, &g.Modified)
 		if err != nil {
 			return nil, err
 		}
