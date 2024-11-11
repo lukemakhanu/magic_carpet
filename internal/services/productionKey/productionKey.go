@@ -155,11 +155,6 @@ func (s *ProcessKeyService) RedisZRem(ctx context.Context, list string, key stri
 // GetUpcomingSeasonWeeks : used to return upcoming season week.
 func (s *ProcessKeyService) GetUpcomingSeasonWeeks(ctx context.Context, oddsSortedSet, sanitizedKeysSet string, minimumRequired int) error {
 
-	dd, err := s.AvailableMatches(ctx)
-	if err != nil {
-		return fmt.Errorf("err : %v failed to return available matches ", err)
-	}
-
 	data, err := s.seasonWeekMysql.UpcomingSsnWeeks2(ctx)
 	if err != nil {
 		return fmt.Errorf("err : %v failed to query upcoming season weeks ", err)
@@ -179,7 +174,7 @@ func (s *ProcessKeyService) GetUpcomingSeasonWeeks(ctx context.Context, oddsSort
 
 		n := 0
 
-		matchMap, err := s.Validate(ctx, x.LeagueID, oddsSortedSet, distr, x.CompetitionID, dd)
+		matchMap, err := s.Validate(ctx, x.LeagueID, oddsSortedSet, distr, x.CompetitionID)
 		if err != nil {
 			log.Printf("Err : %v unable to create season week >>>>> ", err)
 		} else {
@@ -604,7 +599,7 @@ func (s *ProcessKeyService) TeamInfo(leagueID string, teamID string) (string, st
 	}
 }
 
-func (s *ProcessKeyService) Validate(ctx context.Context, leagueID, oddsSortedSet string, distr []mrs.Mrs, competitionID string, dd map[string][]goals.Goals) (map[int]oddsFiles.CheckKeys, error) {
+func (s *ProcessKeyService) Validate(ctx context.Context, leagueID, oddsSortedSet string, distr []mrs.Mrs, competitionID string) (map[int]oddsFiles.CheckKeys, error) {
 
 	m := make(map[int]oddsFiles.CheckKeys)
 
@@ -621,7 +616,7 @@ func (s *ProcessKeyService) Validate(ctx context.Context, leagueID, oddsSortedSe
 	// Get the games ration for over TG25
 
 	keysList := []oddsFiles.CheckKeys{}
-	data, err := s.DecideRatio(ctx, oddsSortedSet, fetched, distr, competitionID, dd)
+	data, err := s.DecideRatio(ctx, oddsSortedSet, fetched, distr, competitionID)
 	if err != nil {
 		return m, fmt.Errorf("err : %v failed to read from %s z range", err, oddsSortedSet)
 	}
@@ -848,7 +843,7 @@ func (s *ProcessKeyService) OddsCombination(ctx context.Context) []int {
 	return data
 }
 
-func (s *ProcessKeyService) DecideRatio(ctx context.Context, oddsSortedSet string, totalGames int, distr []mrs.Mrs, competitionID string, amatch map[string][]goals.Goals) ([]string, error) {
+func (s *ProcessKeyService) DecideRatio(ctx context.Context, oddsSortedSet string, totalGames int, distr []mrs.Mrs, competitionID string) ([]string, error) {
 	list := []string{}
 
 	type MatchDetails struct {
@@ -1012,68 +1007,35 @@ func (s *ProcessKeyService) DecideRatio(ctx context.Context, oddsSortedSet strin
 		log.Printf("Generated map b.Category : %s, b.Home :%d, b.Away :%d, b.Total %d >> ", b.Category, b.Home, b.Away, b.Total)
 	}
 
-	selectedMatch := make(map[string]string)
-
 	for _, dd := range m {
 
-		// Do some data manipulation here.
+		sortedSetName := fmt.Sprintf("%s_%s", "CL", dd.Category)
 
-		categoryMatches := amatch[dd.Category]
-
-		categoryCount := len(categoryMatches)
-		if categoryCount > 0 {
-
-		RESETMATCH:
-			// shuffle the data
-			categoryIndex := rand.IntN(categoryCount)
-			categoryData := categoryMatches[categoryIndex]
-
-			category := categoryData.Category
-			country := categoryData.Country
-			matchID := categoryData.MatchID
-			projectID := categoryData.ProjectID
-
-			selMatch, ok := selectedMatch[categoryData.GoalID]
-			if ok {
-				log.Println("*** matchID *** %s already used so skip | selMatch %s", categoryData.MatchID, selMatch)
-				goto RESETMATCH
-			} else {
-				log.Println("*** matchID *** %s not used yet so proceed", categoryData.MatchID)
-
-				usedM, err := usedMatches.NewUsedMatches(country, projectID, matchID, category)
-				if err != nil {
-					log.Printf("err : %v unable to initiate usedMatches object", err)
-				}
-
-				lastUsedMatchID, err := s.usedMatchMysql.Save(ctx, *usedM)
-				if err != nil {
-					log.Printf("err : %v unable to save usedMatches ", err)
-				}
-
-				list = append(list, matchID)
-
-				selectedMatch[categoryData.GoalID] = categoryData.GoalID
-
-				log.Printf("Last inserted id : %d", lastUsedMatchID)
-			}
-
-		} else {
-			log.Printf("match category %s has no data", dd.Category)
+		data, err := s.redisConn.GetZRangeWithLimit(ctx, sortedSetName, 15)
+		if err != nil {
+			return list, fmt.Errorf("err : %v failed to read from %s z range", err, sortedSetName)
 		}
 
-		// End of new implementation
+		categoryCount := len(data)
 
-		// data, err := s.redisConn.GetZRangeWithLimit(ctx, dd.Category, 15)
-		// if err != nil {
-		// 	return list, fmt.Errorf("err : %v failed to read from %s z range", err, dd.Category)
-		// }
+		if categoryCount > 0 {
 
-		// log.Println("*** sel category *** ", dd.Category, " data returned ", data)
-		// if len(data) > 0 {
-		// 	list = append(list, data[0])
-		// 	s.RemoveUsedKeys(ctx, dd.Category, data[0])
-		// }
+			log.Println("*** sel category *** ", sortedSetName, " data returned ", data)
+			if len(data) > 0 {
 
+				// shuffle data
+
+				categoryIndex := rand.IntN(categoryCount)
+
+				list = append(list, data[categoryIndex])
+				s.RemoveUsedKeys(ctx, sortedSetName, data[categoryIndex])
+			}
+		} else {
+
+			log.Printf("Key ::::: %s does not have enough data ", sortedSetName)
+
+			return list, fmt.Errorf("err : %v does not have enough data %s", err, sortedSetName)
+		}
 	}
 
 	//
