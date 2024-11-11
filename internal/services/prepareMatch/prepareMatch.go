@@ -158,7 +158,7 @@ func (s *PrepareMatchService) TodaysGame(ctx context.Context) error {
 					return fmt.Errorf("err : %v failed to instantiate cleanup ", err)
 				}
 
-				cleanupID, err := s.cleanUpMysql.Save(ctx, *cleanUps)
+				cleanupID, err := s.cleanUpMysql.SaveForTomorrow(ctx, *cleanUps)
 				if err != nil {
 					return fmt.Errorf("err : %v failed to save new cleanup data ", err)
 				}
@@ -179,7 +179,7 @@ func (s *PrepareMatchService) TodaysGame(ctx context.Context) error {
 			return fmt.Errorf("err : %v failed to instantiate cleanup ", err)
 		}
 
-		cleanupID, err := s.cleanUpMysql.SaveForTomorrow(ctx, *cleanUps)
+		cleanupID, err := s.cleanUpMysql.Save(ctx, *cleanUps)
 		if err != nil {
 			return fmt.Errorf("err : %v failed to save new cleanup data ", err)
 		}
