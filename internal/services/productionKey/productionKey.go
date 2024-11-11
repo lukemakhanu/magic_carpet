@@ -370,6 +370,8 @@ func (s *ProcessKeyService) GetUpcomingSeasonWeeks(ctx context.Context, oddsSort
 		}
 	}
 
+	// update the record of cleanup table here.
+
 	return nil
 }
 
