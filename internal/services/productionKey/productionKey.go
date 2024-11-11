@@ -1026,9 +1026,39 @@ func (s *ProcessKeyService) DecideRatio(ctx context.Context, oddsSortedSet strin
 				// shuffle data
 
 				categoryIndex := rand.IntN(categoryCount)
+				selectedMatchID := data[categoryIndex]
 
-				list = append(list, data[categoryIndex])
-				s.RemoveUsedKeys(ctx, sortedSetName, data[categoryIndex])
+				// Query this record from db so we know which record save as used
+
+				ss, err := s.usedMatchMysql.GetMatchDetails(ctx, dd.Category, selectedMatchID)
+				if err != nil {
+					return list, fmt.Errorf("err : %v failed to return match details of key %s category %s",
+						err, selectedMatchID, dd.Category)
+				}
+
+				for _, r := range ss {
+
+					log.Printf("category : %s | GoalID %s | MatchID %s", r.Category, r.GoalID, r.MatchID)
+
+					// Add value into used table
+
+					aa, err := usedMatches.NewUsedMatches(r.Country, r.ProjectID, r.MatchID, r.Category)
+					if err != nil {
+						return list, fmt.Errorf("err : %v failed to instantiate UsedMatches", err)
+					}
+
+					inserted, err := s.usedMatchMysql.Save(ctx, *aa)
+					if err != nil {
+						return list, fmt.Errorf("err : %v failed to save usedMatch", err)
+					} else {
+						log.Printf("Last inserted usedMatchID %d", inserted)
+
+						list = append(list, selectedMatchID)
+						s.RemoveUsedKeys(ctx, sortedSetName, selectedMatchID)
+					}
+
+				}
+
 			}
 		} else {
 

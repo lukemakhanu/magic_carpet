@@ -92,3 +92,32 @@ func (r *MysqlRepository) GetAvailable(ctx context.Context, category string) ([]
 
 	return gc, nil
 }
+
+// GetMatchDetails : used matchID and category
+func (r *MysqlRepository) GetMatchDetails(ctx context.Context, category, matchID string) ([]goals.Goals, error) {
+	var gc []goals.Goals
+	statement := fmt.Sprintf("select goal_id,country,project_id,match_id,category,\n"+
+		"created,modified from goals where category = '%s' and \n"+
+		"match_id = '%s' ", category, matchID)
+
+	raws, err := r.db.Query(statement)
+	if err != nil {
+		return nil, err
+	}
+
+	for raws.Next() {
+		var g goals.Goals
+		err := raws.Scan(&g.GoalID, &g.Country, &g.ProjectID, &g.MatchID, &g.Category, &g.Created, &g.Modified)
+		if err != nil {
+			return nil, err
+		}
+		gc = append(gc, g)
+	}
+
+	if err = raws.Err(); err != nil {
+		return nil, err
+	}
+	raws.Close()
+
+	return gc, nil
+}
