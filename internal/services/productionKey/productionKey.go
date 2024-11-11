@@ -12,6 +12,8 @@ import (
 
 	"github.com/lukemakhanu/magic_carpet/internal/domains/checkMatches"
 	"github.com/lukemakhanu/magic_carpet/internal/domains/checkMatches/checkMatchesMysql"
+	"github.com/lukemakhanu/magic_carpet/internal/domains/cleanUps"
+	"github.com/lukemakhanu/magic_carpet/internal/domains/cleanUps/cleanUpsMysql"
 	"github.com/lukemakhanu/magic_carpet/internal/domains/goals"
 	"github.com/lukemakhanu/magic_carpet/internal/domains/matches"
 	"github.com/lukemakhanu/magic_carpet/internal/domains/matches/matchesMysql"
@@ -45,6 +47,7 @@ type ProcessKeyService struct {
 	mrsMysql          mrs.MrsRepository
 	usedMatchMysql    usedMatches.UsedMatchesRepository
 	checkMatchesMysql checkMatches.CheckMatchesRepository
+	cleanUpMysql      cleanUps.CleanUpsRepository
 	redisConn         processRedis.RunRedis
 }
 
@@ -131,6 +134,18 @@ func WithRedisRepository(redisServer string, dbNum int, maxIdle int, maxActive i
 			return err
 		}
 		os.redisConn = d
+		return nil
+	}
+}
+
+// WithMysqlCleanUpsRepository : returns cleanups
+func WithMysqlCleanUpsRepository(connectionString string) ProcessKeyConfiguration {
+	return func(os *ProcessKeyService) error {
+		d, err := cleanUpsMysql.New(connectionString)
+		if err != nil {
+			return err
+		}
+		os.cleanUpMysql = d
 		return nil
 	}
 }
@@ -366,6 +381,33 @@ func (s *ProcessKeyService) GetUpcomingSeasonWeeks(ctx context.Context, oddsSort
 	}
 
 	// update the record of cleanup table here.
+
+	if len(data) == 0 {
+
+		log.Printf("About to update cleanup records")
+
+		// Look just for status = "cleaned" and update it to processed.
+		selStatus := "cleaned"
+		aa, err := s.cleanUpMysql.CleanUpsByStatus(ctx, selStatus)
+		if err != nil {
+			return fmt.Errorf("err : %v failed to pull cleanup data. ", err)
+		}
+
+		if len(aa) > 0 {
+			// Do an update
+
+			processedStatus := "processed"
+			updated, err := s.cleanUpMysql.UpdateCleanUps(ctx, aa[0].CleanUpID, processedStatus)
+			if err != nil {
+				return fmt.Errorf("err : %v failed to pull cleanup data. ", err)
+			}
+
+			log.Printf("Updated cleanup record %d", updated)
+
+		} else {
+			log.Printf("All cleanup records updated")
+		}
+	}
 
 	return nil
 }
