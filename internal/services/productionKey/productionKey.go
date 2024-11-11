@@ -157,7 +157,7 @@ func (s *ProcessKeyService) GetUpcomingSeasonWeeks(ctx context.Context, oddsSort
 
 	data, err := s.seasonWeekMysql.UpcomingSsnWeeks2(ctx)
 	if err != nil {
-		return fmt.Errorf("err : %v failed to query upcoming season weeks ", err)
+		return fmt.Errorf("err : %v failed to query upcoming season weeks. ", err)
 	}
 
 	for _, x := range data {
