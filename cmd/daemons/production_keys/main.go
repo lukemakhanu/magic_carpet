@@ -36,6 +36,7 @@ func main() {
 		productionKey.WithMysqlCheckMatchesRepository(viper.GetString("mySQL.live")),
 		productionKey.WithMysqlMrsRepository(viper.GetString("mySQL.live")),
 		productionKey.WithMysqlUsedMatchesRepository(viper.GetString("mySQL.live")),
+		productionKey.WithMysqlCleanUpsRepository(viper.GetString("mySQL.live")),
 		productionKey.WithRedisRepository(viper.GetString("redis.live"), viper.GetInt("redis.dbNum"),
 			viper.GetInt("redis.maxIdle"), viper.GetInt("redis.maxActive"), viper.GetDuration("redis.duration")),
 	)
