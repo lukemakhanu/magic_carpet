@@ -49,9 +49,9 @@ func New(connectionString string) (*MysqlRepository, error) {
 func (mr *MysqlRepository) Save(ctx context.Context, t matchRequests.MatchRequests) (int, error) {
 	var d int
 	rs, err := mr.db.Exec("INSERT match_requests SET instant_competition_id=?,player_id=?,start_time=?,end_time=?, \n"+
-		"early_finish=?,played=?,key_created=?,created=now(),modified=now() ON DUPLICATE KEY UPDATE modified=now()",
+		"early_finish=?,played=?,key_created=?,game_started=?,created=now(),modified=now() ON DUPLICATE KEY UPDATE modified=now()",
 		t.InstantCompetitionID, t.PlayerID, t.StartTime, t.EndTime,
-		t.EarlyFinish, t.Played, t.KeyCreated)
+		t.EarlyFinish, t.Played, t.KeyCreated, t.GameStarted)
 
 	if err != nil {
 		return d, fmt.Errorf("unable to save match_requests : %v", err)
@@ -102,7 +102,7 @@ func (mr *MysqlRepository) UpdatePlayed(ctx context.Context, earlyFinish, matchR
 func (r *MysqlRepository) PendingRequestedMatchDesc(ctx context.Context, playerID, competitionID, keyCreated string) ([]matchRequests.MatchRequests, error) {
 	var gc []matchRequests.MatchRequests
 	statement := fmt.Sprintf("select match_request_id,instant_competition_id,player_id,start_time,end_time,\n"+
-		"early_finish,played,key_created,created,modified from match_requests where player_id = '%s' and \n"+
+		"early_finish,played,key_created,game_started,created,modified from match_requests where player_id = '%s' and \n"+
 		"instant_competition_id= '%s' and key_created='%s' order by match_request_id asc",
 		playerID, competitionID, keyCreated)
 
@@ -114,7 +114,7 @@ func (r *MysqlRepository) PendingRequestedMatchDesc(ctx context.Context, playerI
 	for raws.Next() {
 		var g matchRequests.MatchRequests
 		err := raws.Scan(&g.MatchRequestID, &g.InstantCompetitionID, &g.PlayerID, &g.StartTime, &g.EndTime,
-			&g.EarlyFinish, &g.Played, &g.KeyCreated, &g.Created, &g.Modified)
+			&g.EarlyFinish, &g.Played, &g.KeyCreated, &g.GameStarted, &g.Created, &g.Modified)
 		if err != nil {
 			return nil, err
 		}

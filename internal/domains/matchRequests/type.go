@@ -9,6 +9,7 @@ type MatchRequests struct {
 	EarlyFinish          string
 	Played               string
 	KeyCreated           string
+	GameStarted          string
 	Created              string
 	Modified             string
 }

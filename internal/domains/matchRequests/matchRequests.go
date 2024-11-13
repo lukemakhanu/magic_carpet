@@ -16,7 +16,7 @@ import (
 //   ADD KEY `modified` (`modified`);
 
 // NewMatchRequests instantiate players Struct
-func NewMatchRequests(instantCompetitionID, playerID, startTime, endTime, earlyFinish, played, keyCreated string) (*MatchRequests, error) {
+func NewMatchRequests(instantCompetitionID, playerID, startTime, endTime, earlyFinish, played, keyCreated, gameStarted string) (*MatchRequests, error) {
 
 	if instantCompetitionID == "" {
 		return &MatchRequests{}, fmt.Errorf("instantCompetitionID not set")
@@ -46,6 +46,10 @@ func NewMatchRequests(instantCompetitionID, playerID, startTime, endTime, earlyF
 		return &MatchRequests{}, fmt.Errorf("keyCreated not set")
 	}
 
+	if gameStarted == "" {
+		return &MatchRequests{}, fmt.Errorf("gameStarted not set")
+	}
+
 	created := time.Now().Format("2006-01-02 15:04:05")
 	modified := time.Now().Format("2006-01-02 15:04:05")
 
@@ -57,6 +61,7 @@ func NewMatchRequests(instantCompetitionID, playerID, startTime, endTime, earlyF
 		EarlyFinish:          earlyFinish,
 		Played:               played,
 		KeyCreated:           keyCreated,
+		GameStarted:          gameStarted,
 		Created:              created,
 		Modified:             modified,
 	}, nil
