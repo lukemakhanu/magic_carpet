@@ -93,8 +93,7 @@ func (s *PrepareMatchService) TodaysGame(ctx context.Context) error {
 		current_time := time.Now().Local()
 		log.Println("system date ", current_time.Format("2006-01-02"), "Db date", cleanDate, "status ", status)
 
-		//if cleanDate == current_time.Format("2006-01-02") && status == "pending" {
-		if status == "pending" {
+		if cleanDate == current_time.Format("2006-01-02") && status == "pending" {
 
 			log.Printf("All is set >> clean up data")
 

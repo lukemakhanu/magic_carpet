@@ -144,3 +144,30 @@ func (mr *MysqlRepository) SaveForTomorrow(ctx context.Context, t cleanUps.Clean
 
 	return int(lastInsertedID), nil
 }
+
+func (r *MysqlRepository) CleanUpsByStatusAndDate(ctx context.Context, status string) ([]cleanUps.CleanUps, error) {
+	var gc []cleanUps.CleanUps
+
+	statement := fmt.Sprintf("select clean_up_id,project_id,clean_up_date,status,created,modified from clean_ups \n"+
+		"where status ='%s' and clean_up_date = date(now()) order by 1 desc limit 1 ", status)
+	raws, err := r.db.Query(statement)
+	if err != nil {
+		return nil, err
+	}
+
+	for raws.Next() {
+		var g cleanUps.CleanUps
+		err := raws.Scan(&g.CleanUpID, &g.ProjectID, &g.CleanUpDate, &g.Status, &g.Created, &g.Modified)
+		if err != nil {
+			return nil, err
+		}
+		gc = append(gc, g)
+	}
+
+	if err = raws.Err(); err != nil {
+		return nil, err
+	}
+	raws.Close()
+
+	return gc, nil
+}

@@ -170,6 +170,19 @@ func (s *ProcessKeyService) RedisZRem(ctx context.Context, list string, key stri
 // GetUpcomingSeasonWeeks : used to return upcoming season week.
 func (s *ProcessKeyService) GetUpcomingSeasonWeeks(ctx context.Context, oddsSortedSet, sanitizedKeysSet string, minimumRequired int) error {
 
+	// Make sure data is cleaned before starting to create keys
+	cleanedStatus := "cleaned"
+	clData, err := s.cleanUpMysql.CleanUpsByStatusAndDate(ctx, cleanedStatus)
+	if err != nil {
+		return fmt.Errorf("err : %v failed to clean up data before key generation ", err)
+	}
+
+	log.Println("clean up data returns", clData)
+
+	if len(clData) == 0 {
+		return fmt.Errorf("clean up data before generating keys ")
+	}
+
 	data, err := s.seasonWeekMysql.UpcomingSsnWeeks2(ctx)
 	if err != nil {
 		return fmt.Errorf("err : %v failed to query upcoming season weeks. ", err)

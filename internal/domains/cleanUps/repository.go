@@ -9,4 +9,5 @@ type CleanUpsRepository interface {
 	LastCleanUps(ctx context.Context) ([]CleanUps, error)
 	UpdateCleanUps(ctx context.Context, cleanUpID, status string) (int64, error)
 	SaveForTomorrow(ctx context.Context, t CleanUps) (int, error)
+	CleanUpsByStatusAndDate(ctx context.Context, status string) ([]CleanUps, error)
 }
