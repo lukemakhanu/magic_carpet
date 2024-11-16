@@ -38,9 +38,9 @@ func New(connectionString string) (*MysqlRepository, error) {
 // Save :
 func (mr *MysqlRepository) Save(ctx context.Context, t selectedMatches.SelectedMatches) (int, error) {
 	var d int
-	rs, err := mr.db.Exec("INSERT selected_matches SET player_id=?,match_request_id=?,parent_match_id=?, \n"+
+	rs, err := mr.db.Exec("INSERT selected_matches SET player_id=?,period_id=?,parent_match_id=?, \n"+
 		"created=now(),modified=now() ON DUPLICATE KEY UPDATE modified=now()",
-		t.PlayerID, t.MatchRequestID, t.ParentMatchID)
+		t.PlayerID, t.PeriodID, t.ParentMatchID)
 
 	if err != nil {
 		return d, fmt.Errorf("Unable to save selected_matches : %v", err)
@@ -57,42 +57,14 @@ func (mr *MysqlRepository) Save(ctx context.Context, t selectedMatches.SelectedM
 /* CREATE TABLE `selected_matches` (
 `selected_matches_id` bigint(40) NOT NULL,
 `player_id` bigint(30) NOT NULL,
-`match_request_id` bigint(40) NOT NULL,
+`period_id` bigint(40) NOT NULL,
 `parent_match_id` varchar(50) NOT NULL,
 `created` datetime NOT NULL,
 `modified` datetime NOT NULL */
 
-func (r *MysqlRepository) GetMatchesbyRequestID(ctx context.Context, matchRequestID string) ([]selectedMatches.SelectedMatches, error) {
-	var gc []selectedMatches.SelectedMatches
-	statement := fmt.Sprintf("select selected_matches_id,player_id,match_request_id,parent_match_id,created,\n"+
-		"modified from selected_matches where selected_matches_id = '%s' ",
-		matchRequestID)
-
-	raws, err := r.db.Query(statement)
-	if err != nil {
-		return nil, err
-	}
-
-	for raws.Next() {
-		var g selectedMatches.SelectedMatches
-		err := raws.Scan(&g.SelectedMatchesID, &g.PlayerID, &g.MatchRequestID, &g.ParentMatchID, &g.Created, &g.Modified)
-		if err != nil {
-			return nil, err
-		}
-		gc = append(gc, g)
-	}
-
-	if err = raws.Err(); err != nil {
-		return nil, err
-	}
-	raws.Close()
-
-	return gc, nil
-}
-
 func (r *MysqlRepository) GetMatchesbyPlayerID(ctx context.Context, playerID string) ([]selectedMatches.SelectedMatches, error) {
 	var gc []selectedMatches.SelectedMatches
-	statement := fmt.Sprintf("select selected_matches_id,player_id,match_request_id,parent_match_id,created,\n"+
+	statement := fmt.Sprintf("select selected_matches_id,player_id,period_id,parent_match_id,created,\n"+
 		"modified from selected_matches where player_id = '%s' ",
 		playerID)
 
@@ -103,7 +75,7 @@ func (r *MysqlRepository) GetMatchesbyPlayerID(ctx context.Context, playerID str
 
 	for raws.Next() {
 		var g selectedMatches.SelectedMatches
-		err := raws.Scan(&g.SelectedMatchesID, &g.PlayerID, &g.MatchRequestID, &g.ParentMatchID, &g.Created, &g.Modified)
+		err := raws.Scan(&g.SelectedMatchesID, &g.PlayerID, &g.PeriodID, &g.ParentMatchID, &g.Created, &g.Modified)
 		if err != nil {
 			return nil, err
 		}
@@ -118,11 +90,11 @@ func (r *MysqlRepository) GetMatchesbyPlayerID(ctx context.Context, playerID str
 	return gc, nil
 }
 
-func (r *MysqlRepository) GetMatchesbyMatchRequestID(ctx context.Context, matchRequestID string) ([]selectedMatches.SelectedMatches, error) {
+func (r *MysqlRepository) GetMatchesbyPeriodID(ctx context.Context, periodID string) ([]selectedMatches.SelectedMatches, error) {
 	var gc []selectedMatches.SelectedMatches
-	statement := fmt.Sprintf("select selected_matches_id,player_id,match_request_id,parent_match_id,created,\n"+
-		"modified from selected_matches where match_request_id = '%s' ",
-		matchRequestID)
+	statement := fmt.Sprintf("select selected_matches_id,player_id,period_id,parent_match_id,created,\n"+
+		"modified from selected_matches where period_id = '%s' ",
+		periodID)
 
 	raws, err := r.db.Query(statement)
 	if err != nil {
@@ -131,7 +103,7 @@ func (r *MysqlRepository) GetMatchesbyMatchRequestID(ctx context.Context, matchR
 
 	for raws.Next() {
 		var g selectedMatches.SelectedMatches
-		err := raws.Scan(&g.SelectedMatchesID, &g.PlayerID, &g.MatchRequestID, &g.ParentMatchID, &g.Created, &g.Modified)
+		err := raws.Scan(&g.SelectedMatchesID, &g.PlayerID, &g.PeriodID, &g.ParentMatchID, &g.Created, &g.Modified)
 		if err != nil {
 			return nil, err
 		}

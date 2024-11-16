@@ -12,8 +12,8 @@
         "MaxAge": "1",
         "Compress": "true"
     },
-    "client_api": {
-        "logs": "/var/log/veimu_apps/client_api/info.log",
-        "port": "8030"
+    "instant_game_server": {
+        "logs": "/var/log/magic_carpet/instant_game_server/info.log",
+        "port": "8059"
     }
 }

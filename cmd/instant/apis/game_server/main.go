@@ -38,7 +38,7 @@ func main() {
 	InitConfig()
 
 	redisLive := "127.0.0.1:6379"
-	mysqlLive := "root:tribute@tcp(127.0.0.1)/veimu?charset=utf8"
+	mysqlLive := "root:tribute@tcp(127.0.0.1)/magic_carpet?charset=utf8"
 
 	ir, err := instantRedisServer.NewInstantRedisServerService(
 		instantRedisServer.WithSharedHttpConfRepository(),
@@ -70,7 +70,7 @@ func main() {
 	}
 
 	// Start Api here
-	Run(viper.GetInt("client_api.port"), ms)
+	Run(viper.GetInt("instant_game_server.port"), ms)
 
 	sig := make(chan os.Signal, 1)
 	defer close(sig)
@@ -103,7 +103,7 @@ func Run(port int, ms *instantGameServer.InstantGameServerService) {
 
 	instantGames := Router.Group("/v1/")
 	{
-		instantGames.POST("/fetch_instant_games", ms.QueryInstantGames)
+		instantGames.POST("/fetch_instant_games", ms.FetchInstantGames)
 	}
 
 	portStr := fmt.Sprintf(":%d", port)
@@ -113,7 +113,7 @@ func Run(port int, ms *instantGameServer.InstantGameServerService) {
 
 func InitConfig() {
 	configUtils(addConfigPathLive, addConfigPathLocal)
-	logUtils(viper.GetString("client_api.logs"), viper.GetInt("log_setting.MaxSize"),
+	logUtils(viper.GetString("instant_game_server.logs"), viper.GetInt("log_setting.MaxSize"),
 		viper.GetInt("log_setting.MaxBackups"), viper.GetInt("log_setting.MaxAge"),
 		viper.GetBool("log_setting.Compress"))
 }
