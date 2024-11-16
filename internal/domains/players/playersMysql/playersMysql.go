@@ -75,7 +75,7 @@ func (mr *MysqlRepository) UpdatePlayer(ctx context.Context, profileTag, status 
 
 func (r *MysqlRepository) PlayerExists(ctx context.Context, profileTag string) ([]players.Players, error) {
 	var gc []players.Players
-	statement := fmt.Sprintf("select prayer_id,profile_tag,status,created,modified from players where profile_tag = '%s' ",
+	statement := fmt.Sprintf("select player_id,profile_tag,status,created,modified from players where profile_tag = '%s' ",
 		profileTag)
 
 	raws, err := r.db.Query(statement)
