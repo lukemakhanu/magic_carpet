@@ -38,33 +38,39 @@ func New(connectionString string) (*MysqlRepository, error) {
 // Save :
 func (mr *MysqlRepository) Save(ctx context.Context, t selectedMatches.SelectedMatches) (int, error) {
 	var d int
+
 	rs, err := mr.db.Exec("INSERT selected_matches SET player_id=?,period_id=?,parent_match_id=?, \n"+
-		"created=now(),modified=now() ON DUPLICATE KEY UPDATE modified=now()",
-		t.PlayerID, t.PeriodID, t.ParentMatchID)
+		"home_team_id=?,away_team_id=?,status=?,created=now(),modified=now() ON DUPLICATE KEY UPDATE modified=now()",
+		t.PlayerID, t.PeriodID, t.ParentMatchID,
+		t.HomeTeamID, t.AwayTeamID, t.Status)
 
 	if err != nil {
-		return d, fmt.Errorf("Unable to save selected_matches : %v", err)
+		return d, fmt.Errorf("unable to save selected_matches : %v", err)
 	}
 
 	lastInsertedID, err := rs.LastInsertId()
 	if err != nil {
-		return d, fmt.Errorf("Unable to retrieve last selected matches ID [primary key] : %v", err)
+		return d, fmt.Errorf("unable to retrieve last selected matches ID [primary key] : %v", err)
 	}
 
 	return int(lastInsertedID), nil
 }
 
-/* CREATE TABLE `selected_matches` (
-`selected_matches_id` bigint(40) NOT NULL,
-`player_id` bigint(30) NOT NULL,
-`period_id` bigint(40) NOT NULL,
-`parent_match_id` varchar(50) NOT NULL,
-`created` datetime NOT NULL,
-`modified` datetime NOT NULL */
+// | selected_matches | CREATE TABLE `selected_matches` (
+//   `selected_matches_id` bigint NOT NULL AUTO_INCREMENT,
+//   `player_id` bigint NOT NULL,
+//   `period_id` bigint NOT NULL,
+//   `parent_match_id` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
+//   `home_team_id` smallint NOT NULL,
+//   `away_team_id` smallint NOT NULL,
+//   `status` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
+//   `created` datetime NOT NULL,
+//   `modified` datetime NOT NULL,
 
 func (r *MysqlRepository) GetMatchesbyPlayerID(ctx context.Context, playerID string) ([]selectedMatches.SelectedMatches, error) {
 	var gc []selectedMatches.SelectedMatches
-	statement := fmt.Sprintf("select selected_matches_id,player_id,period_id,parent_match_id,created,\n"+
+	statement := fmt.Sprintf("select selected_matches_id,player_id,period_id,parent_match_id,\n"+
+		"home_team_id,away_team_id,status,created,\n"+
 		"modified from selected_matches where player_id = '%s' ",
 		playerID)
 
@@ -75,7 +81,9 @@ func (r *MysqlRepository) GetMatchesbyPlayerID(ctx context.Context, playerID str
 
 	for raws.Next() {
 		var g selectedMatches.SelectedMatches
-		err := raws.Scan(&g.SelectedMatchesID, &g.PlayerID, &g.PeriodID, &g.ParentMatchID, &g.Created, &g.Modified)
+		err := raws.Scan(&g.SelectedMatchesID, &g.PlayerID, &g.PeriodID, &g.ParentMatchID,
+			&g.HomeTeamID, &g.AwayTeamID, &g.Status,
+			&g.Created, &g.Modified)
 		if err != nil {
 			return nil, err
 		}
@@ -92,7 +100,8 @@ func (r *MysqlRepository) GetMatchesbyPlayerID(ctx context.Context, playerID str
 
 func (r *MysqlRepository) GetMatchesbyPeriodID(ctx context.Context, periodID string) ([]selectedMatches.SelectedMatches, error) {
 	var gc []selectedMatches.SelectedMatches
-	statement := fmt.Sprintf("select selected_matches_id,player_id,period_id,parent_match_id,created,\n"+
+	statement := fmt.Sprintf("select selected_matches_id,player_id,period_id,parent_match_id,\n"+
+		"home_team_id,away_team_id,status,created,\n"+
 		"modified from selected_matches where period_id = '%s' ",
 		periodID)
 
@@ -103,7 +112,9 @@ func (r *MysqlRepository) GetMatchesbyPeriodID(ctx context.Context, periodID str
 
 	for raws.Next() {
 		var g selectedMatches.SelectedMatches
-		err := raws.Scan(&g.SelectedMatchesID, &g.PlayerID, &g.PeriodID, &g.ParentMatchID, &g.Created, &g.Modified)
+		err := raws.Scan(&g.SelectedMatchesID, &g.PlayerID, &g.PeriodID, &g.ParentMatchID,
+			&g.HomeTeamID, &g.AwayTeamID, &g.Status,
+			&g.Created, &g.Modified)
 		if err != nil {
 			return nil, err
 		}

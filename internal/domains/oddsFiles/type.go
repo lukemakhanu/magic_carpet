@@ -232,3 +232,12 @@ type ValidateKeys struct {
 	Wo   string
 	Ls   string
 }
+
+type FinalPeriod struct {
+	PeriodID     string         `json:"period_id"`
+	PlayerID     string         `json:"player_id"`
+	MatchDay     string         `json:"match_day"`
+	StartTime    string         `json:"start_time"`
+	EndTime      string         `json:"end_time"`
+	FinalMatches []FinalMatches `json:"matches"`
+}

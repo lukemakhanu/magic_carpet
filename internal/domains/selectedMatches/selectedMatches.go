@@ -5,16 +5,8 @@ import (
 	"time"
 )
 
-/* CREATE TABLE `selected_matches` (
-`selected_matches_id` bigint(40) NOT NULL,
-`player_id` bigint(30) NOT NULL,
-`period_id` bigint(40) NOT NULL,
-`parent_match_id` varchar(50) NOT NULL,
-`created` datetime NOT NULL,
-`modified` datetime NOT NULL */
-
 // NewSelectedMatches instantiate selectedMatches Struct
-func NewSelectedMatches(playerID, periodID, parentMatchID string) (*SelectedMatches, error) {
+func NewSelectedMatches(playerID, periodID, parentMatchID, homeTeamID, awayTeamID, status string) (*SelectedMatches, error) {
 
 	if playerID == "" {
 		return &SelectedMatches{}, fmt.Errorf("playerID not set")
@@ -28,6 +20,18 @@ func NewSelectedMatches(playerID, periodID, parentMatchID string) (*SelectedMatc
 		return &SelectedMatches{}, fmt.Errorf("parentMatchID not set")
 	}
 
+	if homeTeamID == "" {
+		return &SelectedMatches{}, fmt.Errorf("homeTeamID not set")
+	}
+
+	if awayTeamID == "" {
+		return &SelectedMatches{}, fmt.Errorf("awayTeamID not set")
+	}
+
+	if status == "" {
+		return &SelectedMatches{}, fmt.Errorf("status not set")
+	}
+
 	created := time.Now().Format("2006-01-02 15:04:05")
 	modified := time.Now().Format("2006-01-02 15:04:05")
 
@@ -35,6 +39,9 @@ func NewSelectedMatches(playerID, periodID, parentMatchID string) (*SelectedMatc
 		PlayerID:      playerID,
 		PeriodID:      periodID,
 		ParentMatchID: parentMatchID,
+		HomeTeamID:    homeTeamID,
+		AwayTeamID:    awayTeamID,
+		Status:        status,
 		Created:       created,
 		Modified:      modified,
 	}, nil

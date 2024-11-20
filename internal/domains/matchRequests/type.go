@@ -1,17 +1,10 @@
 package matchRequests
 
 type MatchRequests struct {
-	MatchRequestID       string
-	InstantCompetitionID string
-	PlayerID             string
-	StartTime            string
-	EndTime              string
-	EarlyFinish          string
-	Played               string
-	KeyCreated           string
-	GameStarted          string
-	Created              string
-	Modified             string
+	MatchRequestID string
+	PlayerID       string
+	Created        string
+	Modified       string
 }
 
 type UsedParentMatchIDs struct {
