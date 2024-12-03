@@ -188,6 +188,36 @@ func (s *InstantGameServerService) GetCORS() gin.HandlerFunc {
 	return s.httpConf.CORSMiddleware()
 }
 
+func (s *InstantGameServerService) FetchInstantGame(c *gin.Context) {
+	var p players.PlayerRequests
+	err := c.Bind(&p)
+	if err != nil {
+		log.Printf("err : %v unable to create requests for matches", err)
+		s.httpConf.JSON(c.Writer, http.StatusBadRequest, gin.H{"error": "unable to create requests for matches"})
+		return
+	}
+
+	if len(p.ProfileTag) == 0 {
+		log.Printf("Missing profile Tag")
+		s.httpConf.JSON(c.Writer, http.StatusBadRequest, gin.H{"error": "bad request"})
+		return
+	}
+
+	player, err := s.playersMysql.PlayerExists(c.Request.Context(), p.ProfileTag)
+	if err != nil {
+		log.Printf("err : %v unable to return a player information", err)
+		s.httpConf.JSON(c.Writer, http.StatusBadRequest, gin.H{"error": "unable to return a player information"})
+		return
+	}
+
+	log.Println("player >>>> ", player)
+
+	s.httpConf.JSON(c.Writer, http.StatusOK, gin.H{"error": "Welcome to instant games API"})
+	return
+
+}
+
+/*
 func (s *InstantGameServerService) FetchInstantGames(c *gin.Context) {
 	oddsSortedSet := "SANITIZED_ODDS"
 	var p players.PlayerRequests
@@ -321,15 +351,13 @@ func (s *InstantGameServerService) FetchInstantGames(c *gin.Context) {
 				return
 			}
 
-			
-
 		}
 
 	}
 
 	s.httpConf.JSON(c.Writer, http.StatusBadRequest, gin.H{"success": "we can start working"})
 	return
-}
+}*/
 
 func (s *InstantGameServerService) FetchRoundMatches(ctx context.Context, playerID, oddsSortedSet string, distr []mrs.Mrs) ([]string, error) {
 

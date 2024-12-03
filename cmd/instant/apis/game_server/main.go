@@ -103,7 +103,7 @@ func Run(port int, ms *instantGameServer.InstantGameServerService) {
 
 	instantGames := Router.Group("/v1/")
 	{
-		instantGames.POST("/fetch_instant_games", ms.FetchInstantGames)
+		instantGames.POST("/fetch_instant_games", ms.FetchInstantGame)
 	}
 
 	portStr := fmt.Sprintf(":%d", port)
