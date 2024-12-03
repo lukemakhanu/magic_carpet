@@ -212,7 +212,7 @@ func (s *InstantGameServerService) FetchInstantGame(c *gin.Context) {
 
 	log.Println("player >>>> ", player)
 
-	s.httpConf.JSON(c.Writer, http.StatusOK, gin.H{"error": "Welcome to instant games API"})
+	s.httpConf.JSON(c.Writer, http.StatusOK, gin.H{"success": "Welcome to instant games API"})
 	return
 
 }
