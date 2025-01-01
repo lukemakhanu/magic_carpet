@@ -473,7 +473,7 @@ func (s *ProcessKeyService) AvailableMatches(ctx context.Context) (map[string][]
 
 }
 
-func (s *ProcessKeyService) TeamInfo(leagueID string, teamID string) (string, string) {
+func (s *ProcessKeyService) TeamInfo1(leagueID string, teamID string) (string, string) {
 	// home_team,home_alias
 
 	switch leagueID {
@@ -646,6 +646,187 @@ func (s *ProcessKeyService) TeamInfo(leagueID string, teamID string) (string, st
 			return "LEC", "LEC"
 		} else if teamID == "20" {
 			return "VER", "VER"
+		} else {
+			return "0", "0"
+		}
+	default:
+		return "0", "0"
+	}
+}
+
+func (s *ProcessKeyService) TeamInfo(leagueID string, teamID string) (string, string) {
+	// home_team,home_alias
+
+	switch leagueID {
+	case "1":
+		if teamID == "9" {
+			return "LIV", "LIV"
+		} else if teamID == "1" {
+			return "MAN", "MAN"
+		} else if teamID == "14" {
+			return "WHU", "WHU"
+		} else if teamID == "6" {
+			return "LEI", "LEI"
+		} else if teamID == "7" {
+			return "TOT", "TOT"
+		} else if teamID == "8" {
+			return "SOU", "SOU"
+		} else if teamID == "4" {
+			return "FUL", "FUL"
+		} else if teamID == "5" {
+			return "TOT", "TOT"
+		} else if teamID == "18" {
+			return "EVE", "EVE"
+		} else if teamID == "13" {
+			return "NEW", "NEW"
+		} else if teamID == "12" {
+			return "MNC", "MNC"
+		} else if teamID == "3" {
+			return "AVL", "AVL"
+		} else if teamID == "15" {
+			return "BHA", "BHA"
+		} else if teamID == "2" {
+			return "ARS", "ARS"
+		} else if teamID == "19" {
+			return "CHE", "CHE"
+		} else if teamID == "17" {
+			return "CRY", "CRY"
+		} else if teamID == "20" {
+			return "WOL", "WOL"
+		} else if teamID == "16" {
+			return "BOU", "BOU"
+		} else if teamID == "11" {
+			return "NFO", "NFO"
+		} else if teamID == "10" {
+			return "BRE", "BRE"
+		} else {
+			return "0", "0"
+		}
+	case "2":
+		if teamID == "1" {
+			return "BAR", "BAR"
+		} else if teamID == "2" {
+			return "ATM", "ATM"
+		} else if teamID == "3" {
+			return "GET", "GET"
+		} else if teamID == "4" {
+			return "SLB", "SLB"
+		} else if teamID == "5" {
+			return "VLL", "VLL"
+		} else if teamID == "6" {
+			return "ALA", "ALA"
+		} else if teamID == "7" {
+			return "MLL", "MLL"
+		} else if teamID == "8" {
+			return "LPA", "LPA"
+		} else if teamID == "9" {
+			return "BET", "BET"
+		} else if teamID == "10" {
+			return "LEG", "LEG"
+		} else if teamID == "11" {
+			return "RSO", "RSO"
+		} else if teamID == "12" {
+			return "RMA", "RMA"
+		} else if teamID == "13" {
+			return "CEL", "CEL"
+		} else if teamID == "14" {
+			return "RAY", "RAY"
+		} else if teamID == "15" {
+			return "VAL", "VAL"
+		} else if teamID == "16" {
+			return "ATH", "ATH"
+		} else if teamID == "17" {
+			return "ESP", "ESP"
+		} else if teamID == "18" {
+			return "GIR", "GIR"
+		} else if teamID == "19" {
+			return "OSA", "OSA"
+		} else if teamID == "20" {
+			return "SEV", "SEV"
+		} else {
+			return "0", "0"
+		}
+	case "3":
+		if teamID == "1" {
+			return "ZES", "ZES"
+		} else if teamID == "2" {
+			return "NKW", "NKW"
+		} else if teamID == "3" {
+			return "NAP", "NAP"
+		} else if teamID == "4" {
+			return "LUS", "LUS"
+		} else if teamID == "5" {
+			return "MSFC", "MSFC"
+		} else if teamID == "6" {
+			return "LUM", "LUM"
+		} else if teamID == "7" {
+			return "KAB", "KAB"
+		} else if teamID == "8" {
+			return "MUZ", "MUZ"
+		} else if teamID == "9" {
+			return "POW", "POW"
+		} else if teamID == "10" {
+			return "BUF", "BUF"
+		} else if teamID == "11" {
+			return "ZAN", "ZAN"
+		} else if teamID == "12" {
+			return "IND", "IND"
+		} else if teamID == "13" {
+			return "RED", "RED"
+		} else if teamID == "14" {
+			return "MUF", "MUF"
+		} else if teamID == "15" {
+			return "EAG", "EAG"
+		} else if teamID == "16" {
+			return "TRI", "TRI"
+		} else if teamID == "17" {
+			return "NKA", "NKA"
+		} else if teamID == "18" {
+			return "FOR", "FOR"
+		} else {
+			return "0", "0"
+		}
+	case "4":
+		if teamID == "1" {
+			return "INT", "INT"
+		} else if teamID == "2" {
+			return "ATA", "ATA"
+		} else if teamID == "3" {
+			return "LAZ", "LAZ"
+		} else if teamID == "4" {
+			return "EMP", "EMP"
+		} else if teamID == "5" {
+			return "CES", "CES"
+		} else if teamID == "6" {
+			return "CAG", "CAG"
+		} else if teamID == "7" {
+			return "MIL", "MIL"
+		} else if teamID == "8" {
+			return "ROMA", "ROMA"
+		} else if teamID == "9" {
+			return "SAM", "SAM"
+		} else if teamID == "10" {
+			return "PAR", "PAR"
+		} else if teamID == "11" {
+			return "UDI", "UDI"
+		} else if teamID == "12" {
+			return "NAP", "NAP"
+		} else if teamID == "13" {
+			return "MON", "MON"
+		} else if teamID == "14" {
+			return "VER", "VER"
+		} else if teamID == "15" {
+			return "VEN", "VEN"
+		} else if teamID == "16" {
+			return "GEN", "GEN"
+		} else if teamID == "17" {
+			return "BOL", "BOL"
+		} else if teamID == "18" {
+			return "COMO", "COMO"
+		} else if teamID == "19" {
+			return "FIO", "FIO"
+		} else if teamID == "20" {
+			return "TOR", "TOR"
 		} else {
 			return "0", "0"
 		}
